@@ -1,0 +1,9 @@
+{
+  "name": "thumos",
+  "version": "0.0.0",
+  "main": "thumos.js",
+  "author": "Satchel Spencer",
+  "dependencies": {
+    "requirejs": "~2.1.18"
+  }
+}
