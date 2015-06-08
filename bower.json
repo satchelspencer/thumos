@@ -1,0 +1,9 @@
+{
+  "name": "thumos",
+  "dependencies": {
+    "require-css": "~0.1.8",
+    "requirejs-text": "~2.0.14",
+    "require-less": "~0.1.5",
+    "requirejs": "~2.1.18"
+  }
+}
