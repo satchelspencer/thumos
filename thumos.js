@@ -1,13 +1,15 @@
-var fs = require('fs');
-var requirejs = require('requirejs');
 var async = require('async');
+var cheerio = require('cheerio');
+var fs = require('fs');
 var mkdirp = require('mkdirp');
+var requirejs = require('requirejs');
 var rmdir = require('rimraf');
 
 module.exports = {
 	config : function(config, callback){
 		var thumosPath = config.thumosPath||'node_modules/thumos/';
 		var components = thumosPath+'bower_components/';
+		var html = fs.readFileSync(thumosPath+(config.html||'def.html')); //html to populate
 		/* by default use thumos' included plugins */
 		var paths = {
 			model : thumosPath+'model',
@@ -26,32 +28,33 @@ module.exports = {
 			waitSeconds : 0, //no timeout
 			paths : paths
 		});
-		/* destroy current build */
+		/* destroy old build */
 		rmdir.sync(config.buildpath);
 		/* build client side for each  */
-		async.each(Object.keys(config.pages), function(view, cb){
-			var url = config.pages[view];
+		async.each(config.pages, function(page, cb){
 			async.series([
-				function(c){
-					mkdirp(config.buildpath+url, c);
+				function(c){ //make the directory for the page
+					mkdirp(config.buildpath+page.url, c);
 				}, 
-				function(c){
+				function(c){ //create the root symlink to thumos components
 					fs.symlink(__dirname+'/bower_components', config.buildpath+'/_', c);
 				},
-				function(c){
-					fs.writeFile(
-						config.buildpath+url+'index.html', 
-						"<!doctype html><html><head><title></title><script data-main=\"./index.js\" src=\"/_/requirejs/require.js\"></script></head><body></body></html>", 
-					c);
+				function(c){ //make and write our html
+					var $ = cheerio.load(html, {
+						normalizeWhitespace : true
+					});
+					$('title').text(page.title);
+					$('head').append("<script data-main=\"./index.js\" src=\"/_/requirejs/require.js\"></script>");
+					fs.writeFile(config.buildpath+page.url+'index.html', $.html(), c);
 				},
 				function(c){
 					requirejs.optimize({
 						basePath : './',
 						paths : paths,
-						optimize : 'none',
+						optimize : 'uglify',
 						stubModules : ['text', 'css', 'less', 'normalize', 'less-builder'],
-						name : view,
-						out : config.buildpath+url+'index.js'
+						name : page.view,
+						out : config.buildpath+page.url+'index.js'
 					}, c);
 				}
 			], cb);
