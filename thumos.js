@@ -9,11 +9,12 @@ module.exports = {
 	config : function(config, callback){
 		var thumosPath = config.thumosPath||'node_modules/thumos/';
 		var components = thumosPath+'bower_components/';
-		var html = fs.readFileSync(thumosPath+(config.html||'def.html')); //html to populate
+		var html = fs.readFileSync(config.html||thumosPath+'client/def.html'); //html to populate
+		var reqjs = fs.readFileSync(components+'requirejs/require.js');
 		/* by default use thumos' included plugins */
 		var paths = {
-			model : thumosPath+'model',
-			view : thumosPath+'view',
+			model : thumosPath+'client/model',
+			view : thumosPath+'client/view',
 			text : components+'requirejs-text/text',
 			css : components+'require-css/css',
 				'css-builder' : components+'require-css/css-builder',
@@ -44,7 +45,7 @@ module.exports = {
 						normalizeWhitespace : true
 					});
 					$('title').text(page.title);
-					$('head').append("<script data-main=\"./index.js\" src=\"/_/requirejs/require.js\"></script>");
+					$('head').append("<script data-main=\"./index.js\">"+reqjs+"</script>");
 					fs.writeFile(config.buildpath+page.url+'index.html', $.html(), c);
 				},
 				function(c){

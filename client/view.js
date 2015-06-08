@@ -1,5 +1,9 @@
 define(function(){
 	return function(config){
-		return config;
+		return {
+			render : function(){
+				
+			}
+		}
 	};
 });
