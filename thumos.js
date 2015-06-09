@@ -11,6 +11,7 @@ module.exports = {
 		var components = thumosPath+'bower_components/';
 		var html = fs.readFileSync(config.html||thumosPath+'client/def.html'); //html to populate
 		var reqjs = fs.readFileSync(components+'requirejs/require.js');
+		var client = thumosPath+'client/client';
 		/* by default use thumos' included plugins */
 		var paths = {
 			model : thumosPath+'client/model',
@@ -20,11 +21,12 @@ module.exports = {
 				'css-builder' : components+'require-css/css-builder',
     			normalize : components+'require-css/normalize',
 			less : components+'require-less/less',
-				'less-builder' : components+'require-less/less-builder'
+				'less-builder' : components+'require-less/less-builder',
+			jquery : components+'jQuery/dist/jquery.min'
 		}
 		/* overload all paths with user set config paths */
 		for(var key in config.paths) paths[key] = config.paths[key];
-		/* config requirejs */
+		/* config requirejs (only in node does not apply to ) */
 		requirejs.config({
 			waitSeconds : 0, //no timeout
 			paths : paths
@@ -42,7 +44,7 @@ module.exports = {
 				},
 				function(c){ //make and write our html
 					var $ = cheerio.load(html, {
-						normalizeWhitespace : true
+						normalizeWhitespace : config.uglify
 					});
 					$('title').text(page.title);
 					$('head').append("<script data-main=\"./index.js\">"+reqjs+"</script>");
@@ -52,10 +54,18 @@ module.exports = {
 					requirejs.optimize({
 						basePath : './',
 						paths : paths,
-						optimize : 'uglify',
+						packages : [
+							{
+								name : 'init',
+								location : page.view,
+								main : 'index' 
+							}
+						],
+						optimize : config.uglify?'uglify':'none',
 						stubModules : ['text', 'css', 'less', 'normalize', 'less-builder'],
-						name : page.view,
-						out : config.buildpath+page.url+'index.js'
+						name : client,
+						out : config.buildpath+page.url+'index.js',
+						insertRequire : [client]
 					}, c);
 				}
 			], cb);

@@ -1,8 +1,8 @@
-define(function(){
+define(['jquery'], function($){
 	return function(config){
 		return {
-			render : function(){
-				
+			render : function(selecta){
+				$(selecta).html(config.html);
 			}
 		}
 	};
