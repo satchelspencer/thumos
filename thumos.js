@@ -4,6 +4,8 @@ var fs = require('fs');
 var mkdirp = require('mkdirp');
 var requirejs = require('requirejs');
 var rmdir = require('rimraf');
+var postcss = require('postcss');
+var autoprefixer = require('autoprefixer-core');
 
 module.exports = {
 	config : function(config, callback){
@@ -39,6 +41,7 @@ module.exports = {
 		rmdir.sync(config.buildpath);
 		/* build client side for each  */
 		async.each(config.pages, function(page, cb){
+			var out = config.buildpath+page.url+'index.js';
 			async.series([
 				function(c){ //make the directory for the page
 					mkdirp(config.buildpath+page.url, c);
@@ -72,13 +75,21 @@ module.exports = {
 						optimize : config.uglify?'uglify':'none',
 						stubModules : ['text', 'css', 'less', 'normalize', 'less-builder'],
 						name : client,
-						out : config.buildpath+page.url+'index.js',
+						out : out,
 						insertRequire : [client]
-					}, c);
+					}, function(e){
+						console.log(e);
+						c();
+					});
+				},
+				function(c){
+					fs.readFile(out, 'utf8', function(e, build){
+						postcss([autoprefixer]).process(build.match(/cssText=e.*e\)\)\}\(\"(.*)\"\),require/)[1]).then(function(result){
+							fs.writeFile(out, build.replace(/cssText=e.*e\)\)\}\(\"(.*)\"\),require/, result.css), 'utf8', c);
+						});
+					})
 				}
 			], cb);
-		}, function(e){
-			console.log(e);
 		});
 		/* setup routes TODO*/
 		requirejs(config.models, function(){
