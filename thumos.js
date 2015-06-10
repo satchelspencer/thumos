@@ -23,9 +23,13 @@ module.exports = {
 			less : components+'require-less/less',
 				'less-builder' : components+'require-less/less-builder',
 			jquery : components+'jQuery/dist/jquery.min'
+			
 		}
 		/* overload all paths with user set config paths */
 		for(var key in config.paths) paths[key] = config.paths[key];
+		for(var key in config.ext){
+			paths[key] = config.ext[key][0]; //take first of possibles
+		}
 		/* config requirejs (only in node does not apply to ) */
 		requirejs.config({
 			waitSeconds : 0, //no timeout
@@ -40,14 +44,16 @@ module.exports = {
 					mkdirp(config.buildpath+page.url, c);
 				}, 
 				function(c){ //create the root symlink to thumos components
-					fs.symlink(__dirname+'/bower_components', config.buildpath+'/_', c);
+					fs.symlink('./', config.buildpath+'/_', c);
 				},
 				function(c){ //make and write our html
 					var $ = cheerio.load(html, {
 						normalizeWhitespace : config.uglify
 					});
 					$('title').text(page.title);
-					$('head').append("<script data-main=\"./index.js\">"+reqjs+"</script>");
+					$('head').append("<script data-main=\"./index.js\">"+reqjs+"\
+						require.config(JSON.parse('"+JSON.stringify({paths : config.ext})+"'));\
+					</script>");
 					fs.writeFile(config.buildpath+page.url+'index.html', $.html(), c);
 				},
 				function(c){
@@ -61,6 +67,8 @@ module.exports = {
 								main : 'index' 
 							}
 						],
+						shim : config.shim||{},
+						preserveLicenseComments: !config.uglify,
 						optimize : config.uglify?'uglify':'none',
 						stubModules : ['text', 'css', 'less', 'normalize', 'less-builder'],
 						name : client,
