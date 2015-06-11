@@ -4,8 +4,6 @@ var fs = require('fs');
 var mkdirp = require('mkdirp');
 var requirejs = require('requirejs');
 var rmdir = require('rimraf');
-var postcss = require('postcss');
-var autoprefixer = require('autoprefixer-core');
 
 module.exports = {
 	config : function(config, callback){
@@ -19,8 +17,7 @@ module.exports = {
 			model : thumosPath+'client/model',
 			view : thumosPath+'client/view',
 			text : components+'requirejs-text/text',
-			css : components+'require-css/css',
-				'css-builder' : components+'require-css/css-builder',
+			css : thumosPath+'client/css',
     			normalize : components+'require-css/normalize',
 			less : components+'require-less/less',
 				'less-builder' : components+'require-less/less-builder',
@@ -81,13 +78,6 @@ module.exports = {
 						console.log(e);
 						c();
 					});
-				},
-				function(c){
-					fs.readFile(out, 'utf8', function(e, build){
-						postcss([autoprefixer]).process(build.match(/cssText=e.*e\)\)\}\(\"(.*)\"\),require/)[1]).then(function(result){
-							fs.writeFile(out, build.replace(/cssText=e.*e\)\)\}\(\"(.*)\"\),require/, result.css), 'utf8', c);
-						});
-					})
 				}
 			], cb);
 		});
