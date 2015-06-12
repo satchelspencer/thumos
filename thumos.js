@@ -16,11 +16,11 @@ module.exports = {
 		var paths = {
 			model : thumosPath+'client/model',
 			view : thumosPath+'client/view',
-			text : components+'requirejs-text/text',
 			css : thumosPath+'client/css',
-    			normalize : components+'require-css/normalize',
+			text : components+'requirejs-text/text',
 			less : components+'require-less/less',
 				'less-builder' : components+'require-less/less-builder',
+				normalize : components+'require-less/normalize',
 			jquery : components+'jQuery/dist/jquery.min'
 			
 		}
@@ -70,7 +70,7 @@ module.exports = {
 						shim : config.shim||{},
 						preserveLicenseComments: !config.uglify,
 						optimize : config.uglify?'uglify':'none',
-						stubModules : ['text', 'css', 'less', 'normalize', 'less-builder'],
+						stubModules : ['text', 'css', 'normalize', 'less-builder'],
 						name : client,
 						out : out,
 						insertRequire : [client]
