@@ -4,11 +4,11 @@ define(['less-builder'], function(less){
 	var autoprefixer = require.nodeRequire('autoprefixer-core');
 	var deasync = require.nodeRequire('deasync'); //yes we actually need it
 	var mless = {};
+	var config = {}; 
 	for(var prop in less){
-		if(prop != 'onLayerEnd') mless[prop] = less[prop];
-		else mless[prop] = function(write, data){ /* overload less.onLayerEnd */
+		if(prop == 'onLayerEnd') mless['onLayerEnd'] = function(write, data){ /* overload less.onLayerEnd */
 			/* call original function with modified write function */
-			less[prop].call(this, function(content){
+			less['onLayerEnd'].call(this, function(content){
 				var ocss = content.match(/\('(.*)'\);\n$/)[1]; //parse out css from require-less's output
 				var done = false;
 				postcss([autoprefixer]).process(content.match(/\('(.*)'\);\n$/)[1]).then(function(result){
@@ -22,6 +22,11 @@ define(['less-builder'], function(less){
 				write(content);
 			}, data);
 		};
+		else if(prop == 'load') mless['load'] = function(name, req, load, _config){
+			config = _config;
+			less['load'].call(this, name, req, load, _config);
+		};
+		else mless[prop] = less[prop];
 	}
 	return mless;
 })
