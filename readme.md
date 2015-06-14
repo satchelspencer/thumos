@@ -89,6 +89,26 @@ create a new model definition. options:
  
 properties is an object of the format:
 
+## thumos.compat(contexts)
+create a requirejs module with variations for client and server. contexts expects an object with keys:
+ - `client` whatever your client module should be
+ - `server` i bet you can guess
+
+usage (making the module):
+
+~~~ javascript
+define(['compat'], function(compat){
+	return compat({
+		client : function(){
+			return 'i'm on the client'
+		},
+		server : function(){
+			return 'server side'
+		}
+	});
+})
+~~~
+
 # API
 
 # Inclusions

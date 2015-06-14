@@ -17,6 +17,7 @@ module.exports = {
 			model : thumosPath+'client/model',
 			view : thumosPath+'client/view',
 			css : thumosPath+'client/css',
+			compat : thumosPath+'client/compat',
 			text : components+'requirejs-text/text',
 			less : components+'require-less/less',
 				'less-builder' : components+'require-less/less-builder',
@@ -82,8 +83,7 @@ module.exports = {
 			], cb);
 		});
 		/* setup routes TODO*/
-		requirejs(config.models, function(){
-			//console.log(arguments)
+		requirejs([], function(){
 		});
 	}
 }
