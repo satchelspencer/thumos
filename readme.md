@@ -1,19 +1,18 @@
-# thumos
-models and views that build express routes on the server and compile on the client. **one code fits all**
+# Confuguration
 
 ## thumos.config(options)
 setup a new thumos build given options:
   - `buildpath` **path**: destination for the build files (should be accessible by static webserver)
-  - `uglify` (optional) **boolean**: controls minification of source files
+  - `uglify` **boolean**: controls minification of source files (default false)
   - `models` **array**: of paths to thumos models
   - `pages` **array**: of objects specifying build pages:
-    - `title` **string**: title for page
+    - `title` title for page
     - `view` **path**: of thumos view modules
     - `url` **path**: of page destination relative to website root
-  - `paths` (optional) **object**: see http://requirejs.org/docs/api.html#config-paths
-  - `ext` (optional) **object**: paths for external libraries (not to be included in build)
-  - `shim` (optional) **object**: see http://requirejs.org/docs/api.html#config-shim
-  - `html` (optional) **path**: to default html template to build pages from
+  - `paths` **object**: see http://requirejs.org/docs/api.html#config-paths
+  - `ext` **object**: paths for external libraries (not to be included in build)
+  - `shim` **object**: see http://requirejs.org/docs/api.html#config-shim
+  - `html` **path**: to default html template to build pages from
   - `express` **express app**: express app to build model routes on
   
 example setup:
@@ -62,8 +61,34 @@ thumos.config({
 });
 ~~~
 
-## thumos.model(options)
-todo
-
 ## thumos.view(options)
-todo
+create a new view given config options:
+  - `html`: dom to be inserted at render
+  - `init(options)` **fn**: init callback. `this` contains view api
+
+example usage:
+~~~ javascript
+define([
+	'view',
+	'text!./index.html',
+	'css!./index'
+], function(view, template){  
+	return view({
+		hmtl : template,
+		init : function(options){
+		
+		}
+	});
+})
+~~~
+
+## thumos.model(options, properties)
+create a new model definition. options:
+ - `collection` mongo collection
+ - `access` **access module**: default access controls for entire model
+ 
+properties is an object of the format:
+
+# API
+
+# Inclusions
