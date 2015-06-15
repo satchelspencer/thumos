@@ -83,7 +83,8 @@ module.exports = {
 			], cb);
 		});
 		/* setup routes TODO*/
-		requirejs([], function(){
+		requirejs(config.models, function(){
+			console.log(arguments);
 		});
 	}
 }
