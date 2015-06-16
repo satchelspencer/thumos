@@ -1,4 +1,19 @@
-# Confuguration
+# Thumos
+it does some serious shit
+ - [`configuration`](#configuration)
+   - [`views`](#creating-views)
+   - [`models`](#creating-models)
+ - [`api`](#api)
+   - [`views`](#view-api)
+   - [`models`](#model-api)
+ - [`loaders`](#included-loaders)
+   - [`css`](#css-loader)
+   - [`compat`](#compat-loader)
+   - [`view`](#view-loader)
+   - [`model`](#model-loader)
+ - [`dependencies`](#included-dependencies)
+   
+# Configuration
 
 ## thumos(options)
 setup a new thumos build given options:
@@ -111,43 +126,55 @@ define({
 
 # API
 
-## views
+## view api
  - `view.render(selecta, options)` render the view into a parent passing arbitrarty options
    - `selecta` jquery selector for view to be insetered into
    - `options` object that is passed to the view's init function
  - `view.$(selecta)` selects with jquery within the view
+ - `view.dom` jquery object of view
+
+## model api
+- `model.get(key, callback)` get value of key from model, calls back
+- `model.on(key, event, callback)` binds a callback to the model on event, whenever the value of key (or whole object if key is falsey) default events are load and change though abritrary ones can be added if you're into that
+- `model.one(key, event, callback)` same as on but callback destroys itself after one call
+- `model.off(key, event)` removes all events for key or object on event
 
 
+# Included Loaders
+requirejs loaders/plugins
 
-# Included Requirejs loaders/plugins
-
-## css
+## css loader
 load, parse, minify and parse css/less for use in views (or whatever you're into). depends on [require-less](https://github.com/guybedford/require-less)
 
-## compat
+## compat loader
 create a requirejs module with variations for client and server. contexts expects an object with keys:
  - `client` whatever your client module should be
  - `server` i bet you can guess
 
 usage (making the module):
-
 ~~~ javascript
-define(['compat'], function(compat){
-	return compat({
-		client : function(){
-			return 'i'm on the client'
-		},
-		server : function(){
-			return 'server side'
-		}
-	});
+define({
+	client : function(){
+		return 'i'm on the client'
+	},
+	server : function(){
+		return 'server side'
+	}
 })
 ~~~
 
-## model
+using the module:
+~~~javascript
+define(['compat!test'], function(test){
+	console.log(test()) //returns "i'm on the client" or "server side"
+});
+~~~
+
+
+## model loader
 require and parse a model, works contextually
 
-## view
+## view loader
 require and build a view object
 
 # Included Dependencies 
