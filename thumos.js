@@ -8,9 +8,9 @@ var rmdir = require('rimraf');
 module.exports = function(config, callback){
 	var thumosPath = config.thumosPath||'node_modules/thumos/';
 	var components = thumosPath+'bower_components/';
-	var html = fs.readFileSync(config.html||thumosPath+'client/def.html'); //html to populate
+	var html = fs.readFileSync(config.html||thumosPath+'lib/def.html'); //html to populate
 	var reqjs = fs.readFileSync(components+'requirejs/require.js');
-	var client = thumosPath+'client/client';
+	var client = thumosPath+'lib/client';
 	/* by default use thumos' included plugins */
 	var paths = {
 		set : thumosPath+'loaders/set',
@@ -82,9 +82,10 @@ module.exports = function(config, callback){
 		], cb);
 	});
 	/* setup routes TODO*/
-	/*
-requirejs(config.models, function(){
-		console.log(arguments);
+	requirejs(config.sets, function(){
+		async.each(arguments, function(set, cb){
+			console.log(set);
+			cb();
+		})
 	});
-*/
 }

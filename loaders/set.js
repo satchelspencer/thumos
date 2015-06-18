@@ -1,19 +1,23 @@
+/* CLIENT SIDE fn */
 define(function(){
-	/* builder function that creates a client side model interface */
 	function set(config){
 		return {
-			get : function(){
+			get : function(id, callback){
 			
 			},
-			sel : function(){
+			del : function(id, callback){
 			
 			},
-			on : function(){
+			on : function(event, callback){
 			
 			},
-			off : function(){
+			off : function(event){
 			
 			},
+			trigger : function(event){
+			
+			},
+			fn : {},
 			config : config
 		}
 	}

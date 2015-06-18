@@ -113,8 +113,8 @@ define([
 model definitions have the following properties:
  - `name` model name (url friendly)
  - `properties` : object of properties. properties can simply be a model or be defined as so:
-   - `type` : property type
    - `valid` : function that calls back with validity of property
+   - `listed` : bool if model should be included in list
  - `functions` : object of custom functions
  
 example definition:
@@ -136,6 +136,12 @@ sets are a queryable, updateable collection of multiple models. they sync with t
  - `functions` object of custom functions that act on multiple models in a set
  - `queries` object of set queries
 
+sets create the following routes on setup:
+ - `/set/` (get) get list of models in set (default query)
+ - `/set/query/query_name` (post)
+   - `query`
+ - 
+
 # API
 
 ## view api
@@ -145,19 +151,28 @@ sets are a queryable, updateable collection of multiple models. they sync with t
 - `view.$(selecta)` selects with jquery within the view
 - `view.dom` jquery object of view
 
-## set api
-- `set.get(id, callback)` retrieves model by id
-- `set.set(id, prop, value, callback)` sets prop on model by id
-- `set.del(id, callback)` removes model by id
-- `set.on(id, event, callback)` binds a callback to a set event on model by id. events:
+## model api
+- `model.get(prop, callback)` get value of property in model
+- `model.set(prop, value, callback)` set value of prop
+- `model.del()` destroy model
+- `model.on(event, callback)` binds callback to event
+- `model.off(event)` removes callback from event:
   - `change`
   - `remove`
+- `model.trigger(event)` triggers event in model
+- `model.fn` object of available custom functions 
+
+## set api
+- `set.get(id, callback)` retrieves model by id, callsback with model
+- `set.del(id, callback)` removes model by id
 - `set.on(event, callback)` binds to entire set. events:
   - `change`
   - `add`
   - `remove`
-- `set.off(id, event)` removes event from model by id
 - `set.off(event)` removes event from set
+- `set.trigger(event)` trigger event in set
+- `set.query(query, callback)` query a set, callback with result
+- `set.fn` object of available custom functions 
 
 # Included Loaders
 requirejs loaders/plugins
@@ -192,13 +207,10 @@ define(['compat!test'], function(test){
 ## view loader
 require and build a view object
 
-## model loader
-require and parse a model, works contextually
-
 ## set loader
-require a set
+require a set from its definition
 
-# Included Dependencies 
+# Included Dependencies
  - [requirejs](http://requirejs.org/) core of loading/build
    - [requirejs-text](https://github.com/requirejs/text) load text/html
    - [require-less](https://github.com/guybedford/require-less) require css/less and build
