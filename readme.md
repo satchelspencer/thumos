@@ -1,4 +1,22 @@
-# Confuguration
+# Thumos
+it does some serious shit
+ - [`configuration`](#configuration)
+   - [`views`](#creating-views)
+   - [`models`](#creating-models)
+   - [`set`](#creating-sets)
+ - [`api`](#api)
+   - [`views`](#view-api)
+   - [`models`](#model-api)
+   - [`sets`](#set-api)
+ - [`loaders`](#included-loaders)
+   - [`css`](#css-loader)
+   - [`compat`](#compat-loader)
+   - [`view`](#view-loader)
+   - [`model`](#model-loader)
+   - [`set`](#set-loader)
+ - [`dependencies`](#included-dependencies)
+   
+# Configuration
 
 ## thumos(options)
 setup a new thumos build given options:
@@ -46,8 +64,8 @@ thumos({
   },
   buildpath : 'build',
   uglify : false,
-	models : [
-		'models/things',
+	sets : [
+		'sets/things',
 	],
 	pages : [
 		{
@@ -94,9 +112,10 @@ define([
 ## creating models
 model definitions have the following properties:
  - `name` model name (url friendly)
- - `collection` mongo collection (defaults to name)
- - `access` **access module**: default access controls for entire model
- - `properties` : **object of properties**
+ - `properties` : object of properties. properties can simply be a model or be defined as so:
+   - `type` : property type
+   - `valid` : function that calls back with validity of property
+ - `functions` : object of custom functions
  
 example definition:
 ~~~ javascript
@@ -108,47 +127,76 @@ define({
 })
 ~~~
 
+## creating sets
+sets are a queryable, updateable collection of multiple models. they sync with the client and the server.
+ - `name` set name (usually plural of model name) used in url routing
+ - `collection` mongo collection (defaults to name)
+ - `model` model to use
+ - `access` **access module**: default access controls for entire set
+ - `functions` object of custom functions that act on multiple models in a set
+ - `queries` object of set queries
 
 # API
 
-## views
- - `view.render(selecta, options)` render the view into a parent passing arbitrarty options
-   - `selecta` jquery selector for view to be insetered into
-   - `options` object that is passed to the view's init function
- - `view.$(selecta)` selects with jquery within the view
+## view api
+- `view.render(selecta, options)` render the view into a parent passing arbitrary options
+  - `selecta` jquery selector for view to be inserted into
+  - `options` object that is passed to the view's init function
+- `view.$(selecta)` selects with jquery within the view
+- `view.dom` jquery object of view
 
+## set api
+- `set.get(id, callback)` retrieves model by id
+- `set.set(id, prop, value, callback)` sets prop on model by id
+- `set.del(id, callback)` removes model by id
+- `set.on(id, event, callback)` binds a callback to a set event on model by id. events:
+  - `change`
+  - `remove`
+- `set.on(event, callback)` binds to entire set. events:
+  - `change`
+  - `add`
+  - `remove`
+- `set.off(id, event)` removes event from model by id
+- `set.off(event)` removes event from set
 
+# Included Loaders
+requirejs loaders/plugins
 
-# Included Requirejs loaders/plugins
-
-## css
+## css loader
 load, parse, minify and parse css/less for use in views (or whatever you're into). depends on [require-less](https://github.com/guybedford/require-less)
 
-## compat
+## compat loader
 create a requirejs module with variations for client and server. contexts expects an object with keys:
  - `client` whatever your client module should be
  - `server` i bet you can guess
 
 usage (making the module):
-
 ~~~ javascript
-define(['compat'], function(compat){
-	return compat({
-		client : function(){
-			return 'i'm on the client'
-		},
-		server : function(){
-			return 'server side'
-		}
-	});
+define({
+	client : function(){
+		return 'i'm on the client'
+	},
+	server : function(){
+		return 'server side'
+	}
 })
 ~~~
 
-## model
+using the module:
+~~~javascript
+define(['compat!test'], function(test){
+	console.log(test()) //returns "i'm on the client" or "server side"
+});
+~~~
+
+## view loader
+require and build a view object
+
+## model loader
 require and parse a model, works contextually
 
-## view
-require and build a view object
+## set loader
+require a set
 
 # Included Dependencies 
  - [requirejs](http://requirejs.org/) core of loading/build

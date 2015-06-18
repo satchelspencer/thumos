@@ -13,7 +13,7 @@ module.exports = function(config, callback){
 	var client = thumosPath+'client/client';
 	/* by default use thumos' included plugins */
 	var paths = {
-		model : thumosPath+'loaders/model',
+		set : thumosPath+'loaders/set',
 		view : thumosPath+'loaders/view',
 		css : thumosPath+'loaders/css',
 		compat : thumosPath+'loaders/compat',
