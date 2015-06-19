@@ -4,6 +4,8 @@ it does some serious shit
    - [`views`](#creating-views)
    - [`models`](#creating-models)
    - [`set`](#creating-sets)
+   - [`access`](#access-modules)
+   - [`queries`](#queries)
  - [`api`](#api)
    - [`views`](#view-api)
    - [`models`](#model-api)
@@ -12,8 +14,8 @@ it does some serious shit
    - [`css`](#css-loader)
    - [`compat`](#compat-loader)
    - [`view`](#view-loader)
-   - [`model`](#model-loader)
    - [`set`](#set-loader)
+ - [`plugins`](#plugins)
  - [`dependencies`](#included-dependencies)
    
 # Configuration
@@ -37,12 +39,13 @@ setup a new thumos build given options:
   - `shim` **object**: see http://requirejs.org/docs/api.html#config-shim
   - `html` **path**: to default html template to build pages from
   - `express` **express app**: express app to build model routes on
+  - `plugins` **array**: of [plugins](#plugins)
   
 example setup:
 ~~~
 - app
  - main.js
- - models
+ - sets
   - things.js
  - views
   - home
@@ -132,15 +135,23 @@ sets are a queryable, updateable collection of multiple models. they sync with t
  - `name` set name (usually plural of model name) used in url routing
  - `collection` mongo collection (defaults to name)
  - `model` model to use
- - `access` **access module**: default access controls for entire set
+ - `access` [access module](#access-module) default access controls for entire set
+ - `init` query to run on startup
+ - `queries` object of set [queries](#queries)
  - `functions` object of custom functions that act on multiple models in a set
- - `queries` object of set queries
+ 
+## access modules
+access modules are an object with four properties `read` `write` `add` `delete` each is defined by either
+ - [`query`](#queries) that is passed user id. has better performance, especially on read which governs queries from mongodb
+ - `function(user, callback)` uid is the user id. keep in mind code is run on server
 
-sets create the following routes on setup:
- - `/set/` (get) get list of models in set (default query)
- - `/set/query/query_name` (post)
-   - `query`
- - 
+## queries
+queries are defined by function that takes an object of parameters and returns a mongodb query object example:
+~~~ javascript
+minAge : function(age){
+	return {age : {$gt : age}}
+}
+~~~
 
 # API
 
@@ -209,6 +220,9 @@ require and build a view object
 
 ## set loader
 require a set from its definition
+
+# Plugins
+thumos plugins also can do some serious shit, mostly for the backend. Take for example the file plugin that intercepts any properties in sets that have `file : true`. setting that property now requires a [file object](https://developer.mozilla.org/en-US/docs/Web/API/File) 
 
 # Included Dependencies
  - [requirejs](http://requirejs.org/) core of loading/build
