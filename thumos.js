@@ -1,6 +1,8 @@
 var async = require('async');
 var cheerio = require('cheerio');
+var express = require('express');
 var fs = require('fs');
+var mongo = require('mongojs');
 var mkdirp = require('mkdirp');
 var requirejs = require('requirejs');
 var rmdir = require('rimraf');
@@ -82,10 +84,35 @@ module.exports = function(config, callback){
 		], cb);
 	});
 	/* setup routes TODO*/
+	var db = mongo(config.mongo);
 	requirejs(config.sets, function(){
+		/* iterate over each set and setup server side */
 		async.each(arguments, function(set, cb){
-			console.log(set);
+			var router = express.Router();
+			router.route('/')
+				.get(function(req, res){
+					//list according to default query
+				})
+				.post(function(req, res){
+					//add new model(s) to set
+				})
+				.delete(function(req, res){
+					//remove models from set
+				});
+			router.route('/:id')
+				.get(function(req, res){
+					//get individual model
+				})
+				.post(function(req, res){
+					//update model
+				})
+				.delete(function(req, res){
+					//delete model
+				});
+			config.app.use(set.path||'/'+set.name, router);
 			cb();
-		})
+		}, function(){
+		
+		});
 	});
 }

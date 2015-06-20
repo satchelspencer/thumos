@@ -13,6 +13,8 @@
     "cheerio": "~0.19.0",
     "postcss": "~4.1.11",
     "autoprefixer-core": "~5.2.0",
-    "deasync": "~0.1.0"
+    "deasync": "~0.1.0",
+    "express": "~4.12.4",
+    "mongojs": "~1.0.1"
   }
 }

@@ -22,11 +22,7 @@ it does some serious shit
 
 ## thumos(options)
 setup a new thumos build given options:
-  - `mongo` **object**: database information
-  	- `db` db name
-  	- `host` server (optional)
-  	- `user` mongo user (optional)
-  	- `password` mongo pass (optional)
+  - `mongo` db info with auth if needed. see [mongo connection strings](http://docs.mongodb.org/manual/reference/connection-string/)
   - `buildpath` **path**: destination for the build files (should be accessible by static webserver)
   - `uglify` **boolean**: controls minification of source files (default false)
   - `models` **array**: of paths to thumos models
@@ -133,7 +129,8 @@ define({
 ## creating sets
 sets are a queryable, updateable collection of multiple models. they sync with the client and the server.
  - `name` set name (usually plural of model name) used in url routing
- - `collection` mongo collection (defaults to name)
+ - `path` path to be passed to express (must start with `/`) defaults to `/name`
+ - `collection` mongo collection (defaults to `name`)
  - `model` model to use
  - `access` [access module](#access-module) default access controls for entire set
  - `init` query to run on startup
@@ -225,6 +222,8 @@ require a set from its definition
 thumos plugins also can do some serious shit, mostly for the backend. Take for example the file plugin that intercepts any properties in sets that have `file : true`. setting that property now requires a [file object](https://developer.mozilla.org/en-US/docs/Web/API/File) 
 
 # Included Dependencies
+ - [express](http://expressjs.com/) server side routing goodness
+ - [mongojs](https://github.com/mafintosh/mongojs) mongo api in node
  - [requirejs](http://requirejs.org/) core of loading/build
    - [requirejs-text](https://github.com/requirejs/text) load text/html
    - [require-less](https://github.com/guybedford/require-less) require css/less and build
