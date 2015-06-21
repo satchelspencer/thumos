@@ -58,9 +58,7 @@ var thumos = require('thumos');
 var app = express();
 
 thumos({
-  mongo : {
-  	db : 'myapp'
-  },
+  mongo : 'myapp',
   buildpath : 'build',
   uglify : false,
 	sets : [
@@ -94,11 +92,10 @@ view objects have the following properties:
 example definition:
 ~~~ javascript
 define([
-	'view',
 	'text!./index.html', //html dep
-	'css!./index', //css dep
 	'model!models/contacts'
-], function(view, template, contacts){  
+	'css!./index', //css dep
+], function(template, contacts){  
 	return {
 		hmtl : template,
 		init : function(options){
@@ -111,8 +108,8 @@ define([
 ## creating models
 model definitions have the following properties:
  - `name` model name (url friendly)
- - `properties` : object of properties. properties can simply be a model or be defined as so:
-   - `valid` : function that calls back with validity of property
+ - `properties` : object of properties, or [validator](#property-validators). properties can simply be a model or be defined as so:
+   - `valid` : [validator function](#property-validators) that calls back with validity of property
    - `listed` : bool if model should be included in list
  - `functions` : object of custom functions
  
@@ -133,10 +130,19 @@ sets are a queryable, updateable collection of multiple models. they sync with t
  - `collection` mongo collection (defaults to `name`)
  - `model` model to use
  - `access` [access module](#access-module) default access controls for entire set
- - `init` query to run on startup
+ - `init` query to run on startup, defaults to select all
  - `queries` object of set [queries](#queries)
  - `functions` object of custom functions that act on multiple models in a set
  
+## property validators
+a function with arguments `input` and `callback` takes input does some operation and calls back with error as first parameter and new value as second. example:
+~~~javascript
+function(name, callback){
+	if(!name.match(/(.*){5,}/)) callback('name must be at least 5 chars long');
+	else callback(null, name.toLowerCase());
+}
+~~~
+
 ## access modules
 access modules are an object with four properties `read` `write` `add` `delete` each is defined by either
  - [`query`](#queries) that is passed user id. has better performance, especially on read which governs queries from mongodb

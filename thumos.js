@@ -2,7 +2,7 @@ var async = require('async');
 var cheerio = require('cheerio');
 var express = require('express');
 var fs = require('fs');
-var mongo = require('mongojs');
+var mongo = require('./lib/db');
 var mkdirp = require('mkdirp');
 var requirejs = require('requirejs');
 var rmdir = require('rimraf');
@@ -89,9 +89,13 @@ module.exports = function(config, callback){
 		/* iterate over each set and setup server side */
 		async.each(arguments, function(set, cb){
 			var router = express.Router();
+			var collection = db.collection(set.collection||set.name);
 			router.route('/')
 				.get(function(req, res){
 					//list according to default query
+					collection.find(set.init||{}, function(e, models){
+						res.json(models);
+					});
 				})
 				.post(function(req, res){
 					//add new model(s) to set
@@ -99,9 +103,12 @@ module.exports = function(config, callback){
 				.delete(function(req, res){
 					//remove models from set
 				});
-			router.route('/:id')
+			router.route('/:_id')
 				.get(function(req, res){
 					//get individual model
+					collection.findOne({_id : db.id(req.params._id)}, function(e, model){
+						res.json(model);
+					});
 				})
 				.post(function(req, res){
 					//update model
