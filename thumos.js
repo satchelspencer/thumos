@@ -83,40 +83,36 @@ module.exports = function(config, callback){
 			}
 		], cb);
 	});
-	/* setup routes TODO*/
-	var db = mongo(config.mongo);
+	/* make sure all sets are required with the plugin */
+	config.sets = config.sets.map(function(setname){
+		return setname.match(/^set!/)?setname:'set!'+setname;
+	});
 	requirejs(config.sets, function(){
 		/* iterate over each set and setup server side */
 		async.each(arguments, function(set, cb){
+			console.log(set);
 			var router = express.Router();
-			var collection = db.collection(set.collection||set.name);
 			router.route('/')
 				.get(function(req, res){
 					//list according to default query
-					collection.find(set.init||{}, function(e, models){
-						res.json(models);
-					});
 				})
 				.post(function(req, res){
-					//add new model(s) to set
+					//add new model(s) to set, return models
 				})
-				.delete(function(req, res){
-					//remove models from set
+				.put(function(req, res){
+					//update existing models, return models
 				});
-			router.route('/:_id')
+			router.route('/:ids')
 				.get(function(req, res){
-					//get individual model
-					collection.findOne({_id : db.id(req.params._id)}, function(e, model){
-						res.json(model);
-					});
-				})
-				.post(function(req, res){
-					//update model
+					//get models by id
 				})
 				.delete(function(req, res){
-					//delete model
+					//delete models by id
 				});
-			config.app.use(set.path||'/'+set.name, router);
+			router.route('/q/:queryname').post(function(req, res){
+				//accept query parameters in body return models
+			});
+			//config.app.use(set.path||'/'+set.name, router);
 			cb();
 		}, function(){
 		

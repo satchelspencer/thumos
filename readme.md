@@ -166,27 +166,32 @@ minAge : function(age){
 - `view.dom` jquery object of view
 
 ## model api
-- `model.get(prop, callback)` get value of property in model
-- `model.set(prop, value, callback)` set value of prop
+- `model.get(props, callback)` get value of property in model, calls back with object of prop/value pairs
+- `model.set(values, callback)` set props with object of prop:value pairs, calls back with success
 - `model.del()` destroy model
 - `model.on(event, callback)` binds callback to event
-- `model.off(event)` removes callback from event:
   - `change`
   - `remove`
+- `model.off(event)` removes callback from event:
 - `model.trigger(event)` triggers event in model
 - `model.fn` object of available custom functions 
 
 ## set api
-- `set.get(id, callback)` retrieves model by id, callsback with model
-- `set.del(id, callback)` removes model by id
+- `set.get(ids, callback)` retrieves models by id, calls back with [resultset](#resultset-api)
+- `set.del(ids, callback)` removes models by id
+- `set.add(data, callback)` adds array of model data, calls back with added [resultset](#resultset-api)
+- `set.query(query, params, callback)` query a set, callback with [resultset](#resultset-api)
 - `set.on(event, callback)` binds to entire set. events:
   - `change`
   - `add`
   - `remove`
 - `set.off(event)` removes event from set
 - `set.trigger(event)` trigger event in set
-- `set.query(query, callback)` query a set, callback with result
 - `set.fn` object of available custom functions 
+
+## resultset api
+a list of multiple models. a call to the [model api](#model-api) simply makes that call for each model in the resultset
+iterable via underscore like backbone?
 
 # Included Loaders
 requirejs loaders/plugins
