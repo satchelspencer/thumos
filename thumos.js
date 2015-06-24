@@ -1,4 +1,5 @@
 var async = require('async');
+var bodyParser = require('body-parser');
 var cheerio = require('cheerio');
 var express = require('express');
 var fs = require('fs');
@@ -83,6 +84,8 @@ module.exports = function(config, callback){
 			}
 		], cb);
 	});
+	/* setup db */
+	var db = mongo(config.mongo);
 	/* make sure all sets are required with the plugin */
 	config.sets = config.sets.map(function(setname){
 		return setname.match(/^set!/)?setname:'set!'+setname;
@@ -90,11 +93,14 @@ module.exports = function(config, callback){
 	requirejs(config.sets, function(){
 		/* iterate over each set and setup server side */
 		async.each(arguments, function(set, cb){
-			console.log(set);
+			set.collection = db.collection(set.config.collection||set.config.name);
 			var router = express.Router();
+			router.use(bodyParser.json());
 			router.route('/')
-				.get(function(req, res){
-					//list according to default query
+				.get(function(req, res){ //list according to default query
+					set.query(function(e, models){
+						res.json(models);
+					});
 				})
 				.post(function(req, res){
 					//add new model(s) to set, return models
@@ -112,7 +118,7 @@ module.exports = function(config, callback){
 			router.route('/q/:queryname').post(function(req, res){
 				//accept query parameters in body return models
 			});
-			//config.app.use(set.path||'/'+set.name, router);
+			config.app.use(set.config.path||'/'+set.config.name, router);
 			cb();
 		}, function(){
 		

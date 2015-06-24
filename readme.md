@@ -130,7 +130,7 @@ sets are a queryable, updateable collection of multiple models. they sync with t
  - `collection` mongo collection (defaults to `name`)
  - `model` model to use
  - `access` [access module](#access-module) default access controls for entire set
- - `init` query to run on startup, defaults to select all
+ - `get` query to run on startup, defaults to select all
  - `queries` object of set [queries](#queries)
  - `functions` object of custom functions that act on multiple models in a set
  
