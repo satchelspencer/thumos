@@ -20,7 +20,7 @@ it does some serious shit
    
 # Configuration
 
-## thumos(options)
+## thumos.init(options)
 setup a new thumos build given options:
   - `mongo` db info with auth if needed. see [mongo connection strings](http://docs.mongodb.org/manual/reference/connection-string/)
   - `buildpath` **path**: destination for the build files (should be accessible by static webserver)
@@ -34,7 +34,9 @@ setup a new thumos build given options:
   - `ext` **object**: paths for external libraries (not to be included in build)
   - `shim` **object**: see http://requirejs.org/docs/api.html#config-shim
   - `html` **path**: to default html template to build pages from
-  - `express` **express app**: express app to build model routes on
+  - `app` **express app**: express app to build model routes on
+  - `route` : base route for thumos (defaults to '/')
+  - `auth` : [authentication plugin](#authentication)
   - `plugins` **array**: of [plugins](#plugins)
   
 example setup:
@@ -57,7 +59,7 @@ var thumos = require('thumos');
 
 var app = express();
 
-thumos({
+thumos.init({
   mongo : 'myapp',
   buildpath : 'build',
   uglify : false,
@@ -80,7 +82,8 @@ thumos({
     		exports : 'jQuery.fn.cookie'
     	}
 	},
-	express : app
+	auth : thumos.auth(),
+	app : app
 });
 ~~~
 
@@ -155,6 +158,22 @@ minAge : function(age){
 	return {age : {$gt : age}}
 }
 ~~~
+
+## authentication 
+thumos allows custom authentication mechanisms defined by the following object:
+ - `init` : `function(set, app, callback)` setup any routes you will need
+ - `verify` : `function(req, callback)` [express](http://expressjs.com/) middleware. MUST set req.thumos to
+ 
+ ~~~javascript
+ {
+ 	user : 'some unique id/access token'
+ 	/* add anything else you want */
+ }
+ ~~~
+
+thumos by default sets up an email/password based authentication mechanism. cookie based sessions based on [this paper](http://www.cse.msu.edu/~alexliu/publications/Cookie/cookie.pdf). It takes the following options:
+ - userset
+ - memcached
 
 # API
 
