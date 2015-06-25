@@ -97,8 +97,8 @@ var api = {
 		config.auth.init(api.set, config.app, function(){});
 		
 		/* set routes */
-		api.set(config.sets, function(sets){
-			async.each(sets, function(set, cb){
+		api.set(config.sets, function(){
+			async.each(arguments, function(set, cb){
 				var router = express.Router();
 				router.use(bodyParser.json());
 				router.route('/')
@@ -140,7 +140,7 @@ var api = {
 				var set = arguments[i];
 				set.collection = api.db.collection(set.config.collection||set.config.name);
 			}
-			callback(arguments);
+			callback.apply(this, arguments);
 		});
 	},
 	auth : require('./lib/auth')

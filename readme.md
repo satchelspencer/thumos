@@ -172,8 +172,11 @@ thumos allows custom authentication mechanisms defined by the following object:
  ~~~
 
 thumos by default sets up an email/password based authentication mechanism. cookie based sessions based on [this paper](http://www.cse.msu.edu/~alexliu/publications/Cookie/cookie.pdf). It takes the following options:
- - userset
- - memcached
+ - `set` path to userset
+ - `id` name of property to store id
+ - `pass` name of property to store password ([bcrypt](https://github.com/ncb000gt/node.bcrypt.js) password hash)
+ - `sessionLength` number of seconds to persist session, defaults to 3600 (1hr)
+ - `memcached`, defaults to 'localhost:11211'
 
 # API
 
@@ -199,6 +202,7 @@ thumos by default sets up an email/password based authentication mechanism. cook
 - `set.get(ids, callback)` retrieves models by id, calls back with [resultset](#resultset-api)
 - `set.del(ids, callback)` removes models by id
 - `set.add(data, callback)` adds array of model data, calls back with added [resultset](#resultset-api)
+- `set.find(props, callback)` returns resultset of models where properties are equal to parameter `props`
 - `set.query(query, params, callback)` query a set, callback with [resultset](#resultset-api)
 - `set.on(event, callback)` binds to entire set. events:
   - `change`
@@ -266,4 +270,4 @@ thumos plugins also can do some serious shit, mostly for the backend. Take for e
  - [autoprefixer](https://github.com/postcss/autoprefixer) handles browser prefixes at build time
  - [rimraf](https://github.com/isaacs/rimraf) rm -rf
  - [cheerio](https://github.com/cheeriojs/cheerio) server side dom management
- 
+ - [bcrypt](https://github.com/ncb000gt/node.bcrypt.js) password hash
