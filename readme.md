@@ -6,6 +6,7 @@ it does some serious shit
    - [`set`](#creating-sets)
    - [`access`](#access-modules)
    - [`queries`](#queries)
+   - [`authentication`](#authentication)
  - [`api`](#api)
    - [`views`](#view-api)
    - [`models`](#model-api)
@@ -187,17 +188,6 @@ thumos by default sets up an email/password based authentication mechanism. cook
 - `view.$(selecta)` selects with jquery within the view
 - `view.dom` jquery object of view
 
-## model api
-- `model.get(props, callback)` get value of property in model, calls back with object of prop/value pairs
-- `model.set(values, callback)` set props with object of prop:value pairs, calls back with success
-- `model.del()` destroy model
-- `model.on(event, callback)` binds callback to event
-  - `change`
-  - `remove`
-- `model.off(event)` removes callback from event:
-- `model.trigger(event)` triggers event in model
-- `model.fn` object of available custom functions 
-
 ## set api
 - `set.get(ids, callback)` retrieves models by id, calls back with [resultset](#resultset-api)
 - `set.del(ids, callback)` removes models by id
@@ -211,6 +201,16 @@ thumos by default sets up an email/password based authentication mechanism. cook
 - `set.off(event)` removes event from set
 - `set.trigger(event)` trigger event in set
 - `set.fn` object of available custom functions 
+- `set.as(id)` returns model api
+  - `model.get(props, callback)` get value of property in model, calls back with object of prop/value pairs
+  - `model.set(values, callback)` set props with object of prop:value pairs, calls back with success
+  - `model.del()` destroy model
+  - `model.on(event, callback)` binds callback to event
+    - `change`
+    - `remove`
+  - `model.off(event)` removes callback from event: 
+  - `model.trigger(event)` triggers event in model 
+  - `model.fn` object of available custom functions
 
 ## resultset api
 a list of multiple models. a call to the [model api](#model-api) simply makes that call for each model in the resultset
@@ -257,6 +257,8 @@ thumos plugins also can do some serious shit, mostly for the backend. Take for e
 
 # Included Dependencies
  - [express](http://expressjs.com/) server side routing goodness
+   - [cookie-parser](https://github.com/expressjs/cookie-parser)
+   - [body-parser](https://github.com/expressjs/body-parser)
  - [mongojs](https://github.com/mafintosh/mongojs) mongo api in node
  - [requirejs](http://requirejs.org/) core of loading/build
    - [requirejs-text](https://github.com/requirejs/text) load text/html
@@ -270,4 +272,5 @@ thumos plugins also can do some serious shit, mostly for the backend. Take for e
  - [autoprefixer](https://github.com/postcss/autoprefixer) handles browser prefixes at build time
  - [rimraf](https://github.com/isaacs/rimraf) rm -rf
  - [cheerio](https://github.com/cheeriojs/cheerio) server side dom management
+ - [node-memcached](https://github.com/3rd-Eden/memcached) memcached for node
  - [bcrypt](https://github.com/ncb000gt/node.bcrypt.js) password hash

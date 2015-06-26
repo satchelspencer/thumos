@@ -103,7 +103,7 @@ var api = {
 				router.use(bodyParser.json());
 				router.route('/')
 					.get(function(req, res){ //list according to default query
-						set.query(function(e, models){
+						set.find({}, function(e, models){
 							res.json(models);
 						});
 					})
@@ -138,7 +138,12 @@ var api = {
 		requirejs(setPaths, function(){
 			for(var i in arguments){
 				var set = arguments[i];
-				set.collection = api.db.collection(set.config.collection||set.config.name);
+				/* pass in db api */
+				set.db = {
+					collection : api.db.collection(set.config.collection||set.config.name),
+					id : api.db.id,
+					str : api.db.str
+				}
 			}
 			callback.apply(this, arguments);
 		});
