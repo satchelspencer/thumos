@@ -201,20 +201,9 @@ thumos by default sets up an email/password based authentication mechanism. cook
 - `set.off(event)` removes event from set
 - `set.trigger(event)` trigger event in set
 - `set.fn` object of available custom functions 
-- `set.as(id)` returns model api
-  - `model.get(props, callback)` get value of property in model, calls back with object of prop/value pairs
-  - `model.set(values, callback)` set props with object of prop:value pairs, calls back with success
-  - `model.del()` destroy model
-  - `model.on(event, callback)` binds callback to event
-    - `change`
-    - `remove`
-  - `model.off(event)` removes callback from event: 
-  - `model.trigger(event)` triggers event in model 
-  - `model.fn` object of available custom functions
 
 ## resultset api
-a list of multiple models. a call to the [model api](#model-api) simply makes that call for each model in the resultset
-iterable via underscore like backbone?
+an iterable list of multiple models
 
 # Included Loaders
 requirejs loaders/plugins
