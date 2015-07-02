@@ -163,14 +163,7 @@ minAge : function(age){
 ## authentication 
 thumos allows custom authentication mechanisms defined by the following object:
  - `init` : `function(set, app, callback)` setup any routes you will need
- - `verify` : `function(req, callback)` [express](http://expressjs.com/) middleware. MUST set req.thumos to
- 
- ~~~javascript
- {
- 	user : 'some unique id/access token'
- 	/* add anything else you want */
- }
- ~~~
+ - `verify` : `function(req, res, next)` [express](http://expressjs.com/) middleware. MUST set req.user to some unique id/access token
 
 thumos by default sets up an email/password based authentication mechanism. cookie based sessions based on [this paper](http://www.cse.msu.edu/~alexliu/publications/Cookie/cookie.pdf). It takes the following options:
  - `set` path to userset
@@ -194,6 +187,7 @@ thumos by default sets up an email/password based authentication mechanism. cook
 - `set.del(ids, callback)` removes models by id
 - `set.add(data, callback)` adds array of model data, calls back with added [resultset](#resultset-api)
 - `set.find(props, callback)` returns resultset of models where properties are equal to parameter `props`
+- `set.findOne(props, callback)` returns a single model
 - `set.query(query, params, callback)` query a set, callback with [resultset](#resultset-api)
 - `set.on(event, [ids], callback)` binds to entire set. events:
   - `change`
@@ -204,7 +198,7 @@ thumos by default sets up an email/password based authentication mechanism. cook
 - `set.fn` object of available custom functions
 
 ## resultset api
-a list of multiple models. a call to the [model api](#model-api) simply makes that call for each model in the resultset. also includes property ids (an array of ids)
+currently it is just an array of models
 
 # Included Loaders
 requirejs loaders/plugins

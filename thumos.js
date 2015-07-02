@@ -1,5 +1,6 @@
 var async = require('async');
 var bodyParser = require('body-parser');
+var cookieParser = require('cookie-parser');
 var cheerio = require('cheerio');
 var express = require('express');
 var fs = require('fs');
@@ -29,7 +30,9 @@ var api = {
 			less : components+'require-less/less',
 				'less-builder' : components+'require-less/less-builder',
 				normalize : components+'require-less/normalize',
-			jquery : components+'jQuery/dist/jquery.min'
+			jquery : components+'jQuery/dist/jquery.min',
+			async : components+'async/lib/async',
+			underscore : components+'underscore/underscore'
 			
 		}
 		/* overload all paths with user set config paths */
@@ -92,7 +95,7 @@ var api = {
 		/* thumos global router setup */
 		var trouter = express.Router();
 		config.app.use(config.route||'/', trouter);
-		
+		config.app.use(cookieParser("secret"));
 		/* setup authentication init */
 		config.auth.init(api.set, config.app, function(){});
 		
