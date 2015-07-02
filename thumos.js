@@ -94,18 +94,21 @@ var api = {
 		});
 		/* thumos global router setup */
 		var trouter = express.Router();
-		config.app.use(config.route||'/', trouter);
 		config.app.use(cookieParser("secret"));
+		config.app.use(config.route||'/', trouter);
 		/* setup authentication init */
-		config.auth.init(api.set, config.app, function(){});
+		config.auth.init(api.set, function(e, router){
+			config.app.use(router);
+		});
 		
 		/* set routes */
 		api.set(config.sets, function(){
 			async.each(arguments, function(set, cb){
 				var router = express.Router();
-				router.use(bodyParser.json());
+				router.use(config.auth.verify);
 				router.route('/')
 					.get(function(req, res){ //list according to default query
+						console.log(req.user);
 						set.find({}, function(e, models){
 							res.json(models);
 						});

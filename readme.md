@@ -162,7 +162,7 @@ minAge : function(age){
 
 ## authentication 
 thumos allows custom authentication mechanisms defined by the following object:
- - `init` : `function(set, app, callback)` setup any routes you will need
+ - `init` : `function(set, callback)` setup any routes you will need, calls back with a router to be used on app
  - `verify` : `function(req, res, next)` [express](http://expressjs.com/) middleware. MUST set req.user to some unique id/access token
 
 thumos by default sets up an email/password based authentication mechanism. cookie based sessions based on [this paper](http://www.cse.msu.edu/~alexliu/publications/Cookie/cookie.pdf). It takes the following options:
