@@ -100,7 +100,13 @@ var api = {
 		config.auth.init(api.set, function(e, router){
 			config.app.use(router);
 		});
-		
+		/* json parsing middlewrre */
+		var json = function(req, res, next){
+			bodyParser.json()(req, res, function(e){
+				if(e) res.json({error:'json'}); //catch some bullshit json
+				else next();
+			});
+		}
 		/* set routes */
 		api.set(config.sets, function(){
 			async.each(arguments, function(set, cb){
@@ -108,16 +114,24 @@ var api = {
 				router.use(config.auth.verify);
 				router.route('/')
 					.get(function(req, res){ //list according to default query
-						console.log(req.user);
 						set.find({}, function(e, models){
-							res.json(models);
+							if(e) res.json({error : e});
+							else res.json(models);
 						});
 					})
-					.post(function(req, res){
+					.post(json, function(req, res){
 						//add new model(s) to set, return models
+						set.add(req.body, function(e, models){
+							if(e) res.json({error : e});
+							else res.json(models);
+						});
 					})
-					.put(function(req, res){
+					.put(json, function(req, res){
 						//update existing models, return models
+						set.update(req.body, function(e, models){
+							if(e) res.json({error : e});
+							else res.json(models);
+						});
 					});
 				router.route('/:ids')
 					.get(function(req, res){
