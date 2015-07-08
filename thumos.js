@@ -37,14 +37,15 @@ var api = {
 		}
 		/* overload all paths with user set config paths */
 		for(var key in config.paths) paths[key] = config.paths[key];
-		for(var key in config.ext){
-			paths[key] = config.ext[key][0]; //take first of possibles
-		}
+		for(var key in config.ext) paths[key] = config.ext[key].local;
 		/* config requirejs (only in node does not apply to ) */
 		requirejs.config({
 			waitSeconds : 0, //no timeout
 			paths : paths
 		});
+		var ext = {};
+		/* setu fallback paths for client side, not build or server */
+		for(var key in config.ext) ext[key] = [config.ext[key].url, config.ext[key].local];
 		/* destroy old build */
 		rmdir.sync(config.buildpath);
 		/* build client side for each  */
@@ -63,7 +64,7 @@ var api = {
 					});
 					$('title').text(page.title);
 					$('head').append("<script data-main=\"./index.js\">"+reqjs+"\
-						require.config(JSON.parse('"+JSON.stringify({paths : config.ext})+"'));\
+						require.config(JSON.parse('"+JSON.stringify({paths : ext})+"'));\
 					</script>");
 					fs.writeFile(config.buildpath+page.url+'index.html', $.html(), c);
 				},

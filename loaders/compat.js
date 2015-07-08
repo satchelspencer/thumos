@@ -1,10 +1,9 @@
+/* build only takes in a compat format file */
 define(function(){
 	return {
 		load : function(name, req, onload, config, isBuild){
-			req([name], function(mod){
-				var prop = typeof window != 'undefined'?'client':'server';
-				onload(mod?mod[prop]:null);
-			})
+			var suffix = typeof window != 'undefined'||config.isBuild?'Client':'';
+			req([name+suffix], onload);
 		}
 	}
 });

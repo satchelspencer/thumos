@@ -32,7 +32,9 @@ setup a new thumos build given options:
     - `view` **path**: of thumos view modules
     - `url` **path**: of page destination relative to website root
   - `paths` **object**: see http://requirejs.org/docs/api.html#config-paths
-  - `ext` **object**: paths for external libraries (not to be included in build)
+  - `ext` **object**: paths for external libraries with local backup
+    - `url` : url to external library
+    - `local` : local path to library (used in build)
   - `shim` **object**: see http://requirejs.org/docs/api.html#config-shim
   - `html` **path**: to default html template to build pages from
   - `app` **express app**: express app to build model routes on
@@ -75,7 +77,10 @@ thumos.init({
 		}
 	],
 	ext : {
-		'jquery' : 'https://code.jquery.com/jquery-1.11.1.min'
+		'jquery' : {
+			url : 'https://code.jquery.com/jquery-1.11.1.min',
+			local : 'ext/jquery/jquery-1.11.1.min'
+		}
 	},
 	shim : {
 		'ext/jquery-cookie' : {
@@ -207,28 +212,7 @@ requirejs loaders/plugins
 load, parse, minify and parse css/less for use in views (or whatever you're into). depends on [require-less](https://github.com/guybedford/require-less)
 
 ## compat loader
-create a requirejs module with variations for client and server. contexts expects an object with keys:
- - `client` whatever your client module should be
- - `server` i bet you can guess
-
-usage (making the module):
-~~~ javascript
-define({
-	client : function(){
-		return 'i'm on the client'
-	},
-	server : function(){
-		return 'server side'
-	}
-})
-~~~
-
-using the module:
-~~~javascript
-define(['compat!test'], function(test){
-	console.log(test()) //returns "i'm on the client" or "server side"
-});
-~~~
+create a requirejs module with variations for client and server. requires two files `name` and `nameClient` to be required in each place
 
 ## view loader
 require and build a view object
