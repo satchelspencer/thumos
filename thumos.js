@@ -36,16 +36,15 @@ var api = {
 			
 		}
 		/* overload all paths with user set config paths */
+		var serverPaths = {};
 		for(var key in config.paths) paths[key] = config.paths[key];
-		for(var key in config.ext) paths[key] = config.ext[key].local;
+		for(var key in paths) serverPaths[key] = paths[key];
 		/* config requirejs (only in node does not apply to ) */
 		requirejs.config({
 			waitSeconds : 0, //no timeout
-			paths : paths
+			paths : serverPaths
 		});
-		var ext = {};
-		/* setu fallback paths for client side, not build or server */
-		for(var key in config.ext) ext[key] = [config.ext[key].url, config.ext[key].local];
+
 		/* destroy old build */
 		rmdir.sync(config.buildpath);
 		/* build client side for each  */
@@ -64,7 +63,7 @@ var api = {
 					});
 					$('title').text(page.title);
 					$('head').append("<script data-main=\"./index.js\">"+reqjs+"\
-						require.config(JSON.parse('"+JSON.stringify({paths : ext})+"'));\
+						require.config(JSON.parse('"+JSON.stringify({})+"'));\
 					</script>");
 					fs.writeFile(config.buildpath+page.url+'index.html', $.html(), c);
 				},
@@ -108,6 +107,13 @@ var api = {
 				else next();
 			});
 		}
+		/* request error handler boilerplate */
+		function handle(res){
+			return function(e, response){
+				if(e) res.json({error : e});
+				else res.json(response);
+			}
+		}
 		/* set routes */
 		api.set(config.sets, function(){
 			async.each(arguments, function(set, cb){
@@ -115,40 +121,30 @@ var api = {
 				router.use(config.auth.verify);
 				router.route('/')
 					.get(function(req, res){ //list according to default query
-						set.find({}, function(e, models){
-							if(e) res.json({error : e});
-							else res.json(models);
-						});
+						set.find({}, handle(res));
 					})
 					.post(json, function(req, res){
 						//add new model(s) to set, return models
-						set.add(req.body, function(e, models){
-							if(e) res.json({error : e});
-							else res.json(models);
-						});
+						set.add(req.body, handle(res));
 					})
 					.put(json, function(req, res){
 						//update existing models, return models
-						set.update(req.body, function(e, models){
-							if(e) res.json({error : e});
-							else res.json(models);
-						});
+						set.update(req.body, handle(res));
 					});
 				router.route('/:ids')
 					.get(function(req, res){ //get models by id
-						set.get(req.params.ids.split(','), function(e, models){
-							if(e) res.json({error : e});
-							else res.json(models);
-						});
+						set.get(req.params.ids.split(','), handle(res));
 					})
 					.delete(function(req, res){ //delete models by id
-						set.del(req.params.ids.split(','), function(e, removed){
-							if(e) res.json({error : e});
-							else res.json(removed);
-						});
+						set.del(req.params.ids.split(','), handle(res));
 					});
-				router.route('/q/:queryname').post(function(req, res){
-					//accept query parameters in body return models
+				/* setup find querying routes, property data sent via post. fuck the ReSt */
+				router.route('/q/:queryname').post(json, function(req, res){
+					set.query(req.params.queryname, req.body, handle(res));
+				});
+				/* find type query */
+				router.route('/find').post(json, function(req, res){
+					set.find(req.body, handle(res));
 				});
 				trouter.use(set.config.path||'/'+set.config.name, router);
 				cb();

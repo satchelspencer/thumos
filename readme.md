@@ -76,12 +76,6 @@ thumos.init({
 			url : '/'
 		}
 	],
-	ext : {
-		'jquery' : {
-			url : 'https://code.jquery.com/jquery-1.11.1.min',
-			local : 'ext/jquery/jquery-1.11.1.min'
-		}
-	},
 	shim : {
 		'ext/jquery-cookie' : {
     		deps : ['jquery'],
