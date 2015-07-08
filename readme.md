@@ -32,9 +32,6 @@ setup a new thumos build given options:
     - `view` **path**: of thumos view modules
     - `url` **path**: of page destination relative to website root
   - `paths` **object**: see http://requirejs.org/docs/api.html#config-paths
-  - `ext` **object**: paths for external libraries with local backup
-    - `url` : url to external library
-    - `local` : local path to library (used in build)
   - `shim` **object**: see http://requirejs.org/docs/api.html#config-shim
   - `html` **path**: to default html template to build pages from
   - `app` **express app**: express app to build model routes on
