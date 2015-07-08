@@ -183,8 +183,8 @@ thumos by default sets up an email/password based authentication mechanism. cook
 
 ## set api
 - `set.get(ids, callback)` retrieves models by id, calls back with [resultset](#resultset-api)
-- `set.update(data, callback)` updates set
-- `set.del(ids, callback)` removes models by id
+- `set.update(data, callback)` updates set, returns changed models
+- `set.del(ids, callback)` removes models by id, returns list of removed ids
 - `set.add(data, callback)` adds array of model data, calls back with added [resultset](#resultset-api)
 - `set.find(props, callback)` returns resultset of models where properties are equal to parameter `props`
 - `set.findOne(props, callback)` returns a single model

@@ -134,11 +134,17 @@ var api = {
 						});
 					});
 				router.route('/:ids')
-					.get(function(req, res){
-						//get models by id
+					.get(function(req, res){ //get models by id
+						set.get(req.params.ids.split(','), function(e, models){
+							if(e) res.json({error : e});
+							else res.json(models);
+						});
 					})
-					.delete(function(req, res){
-						//delete models by id
+					.delete(function(req, res){ //delete models by id
+						set.del(req.params.ids.split(','), function(e, removed){
+							if(e) res.json({error : e});
+							else res.json(removed);
+						});
 					});
 				router.route('/q/:queryname').post(function(req, res){
 					//accept query parameters in body return models
