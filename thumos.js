@@ -30,6 +30,7 @@ var api = {
 			less : components+'require-less/less',
 				'less-builder' : components+'require-less/less-builder',
 				normalize : components+'require-less/normalize',
+			crc32 : thumosPath+'node_modules/crc-32/crc32',
 			jquery : components+'jQuery/dist/jquery.min',
 			async : components+'async/lib/async',
 			underscore : components+'underscore/underscore'

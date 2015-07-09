@@ -185,16 +185,19 @@ thumos by default sets up an email/password based authentication mechanism. cook
 - `set.find(props, callback)` returns resultset of models where properties are equal to parameter `props`
 - `set.findOne(props, callback)` returns a single model
 - `set.query(query, params, callback)` query a set, callback with [resultset](#resultset-api)
-- `set.on(event, [ids], callback)` binds to entire set. events:
-  - `change`
-  - `add`
-  - `remove`
-- `set.off(event, [ids])` removes event from set
-- `set.trigger(event, [ids])` trigger event in set
+- `set.on(event, which, callback)` binds `callback` to `which` (array of models or ids) when [`event`](#events) is triggered
+- `set.off(event, which)` turns off [`event`](#events) on models
+- `set.trigger(event, which)` trigger [`event`](#events) on models
 - `set.fn` object of available custom functions
 
 ## resultset api
 currently it is just an array of models
+
+## events
+these events are called when certain api actions occur. your events dont have to be these
+ - `change` when a model changes from its previous value
+ - `add` when a new model is added to the set
+ - `del` when a model is removed
 
 # Included Loaders
 requirejs loaders/plugins
@@ -233,3 +236,4 @@ thumos plugins also can do some serious shit, mostly for the backend. Take for e
  - [cheerio](https://github.com/cheeriojs/cheerio) server side dom management
  - [node-memcached](https://github.com/3rd-Eden/memcached) memcached for node
  - [bcrypt](https://github.com/ncb000gt/node.bcrypt.js) password hash
+ - [crc-32](https://github.com/SheetJS/js-crc32) crc32 checksumming for detecting when to fire `change` events
