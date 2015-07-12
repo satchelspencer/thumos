@@ -123,6 +123,24 @@ define({
 })
 ~~~
 
+## property type plugins
+extend the functionality of a property. object with the following properties:
+ - `init : function(config, callback)` setup function (server side) passed main thumos config file
+ - `valid` [validator](#property-validators) only to
+ - `handler : function()` 
+
+example use (in property list):
+~~~ javascript
+properties : {
+	profilePic : {
+		type : file({
+			
+		});
+	}
+}
+})
+~~~
+
 ## creating sets
 sets are a queryable, updateable collection of multiple models. they sync with the client and the server.
  - `name` set name (usually plural of model name) used in url routing
@@ -213,9 +231,6 @@ require and build a view object
 
 ## set loader
 require a set from its definition
-
-# Plugins
-thumos plugins also can do some serious shit, mostly for the backend. Take for example the file plugin that intercepts any properties in sets that have `file : true`. setting that property now requires a [file object](https://developer.mozilla.org/en-US/docs/Web/API/File) 
 
 # Included Dependencies
  - [express](http://expressjs.com/) server side routing goodness
