@@ -6,6 +6,7 @@ var express = require('express');
 var fs = require('fs');
 var mongo = require('./lib/db');
 var mkdirp = require('mkdirp');
+var prequire = require('parent-require');
 var requirejs = require('requirejs');
 var rmdir = require('rimraf');
 
@@ -28,7 +29,6 @@ var api = {
 			type : thumosPath+'loaders/type',
 			css : thumosPath+'loaders/css',
 			compat : thumosPath+'loaders/compat',
-			file : thumosPath+'lib/file',
 			text : components+'requirejs-text/text',
 			less : components+'require-less/less',
 				'less-builder' : components+'require-less/less-builder',
@@ -37,7 +37,6 @@ var api = {
 			jquery : components+'jQuery/dist/jquery.min',
 			async : components+'async/lib/async',
 			underscore : components+'underscore/underscore'
-			
 		}
 		/* overload all paths with user set config paths */
 		var serverPaths = {};
@@ -46,14 +45,16 @@ var api = {
 		/* config requirejs (only in node does not apply to ) */
 		requirejs.config({
 			waitSeconds : 0, //no timeout
-			paths : serverPaths
+			paths : serverPaths,
+			nodeRequire: require
 		});
 		/* setup a separate context from the build, as that will fuck everything */
 		api.require = requirejs.config({
 			waitSeconds : 0, 
 			nodeRequire: require,
         	context:'requirejsModuleLoading',
-			paths : serverPaths
+			paths : serverPaths,
+		    nodeRequire: require
 		});
 		var _ = requirejs('underscore');
 		/* destroy old build */
@@ -155,11 +156,14 @@ var api = {
 			if(e) callback(e);
 			else{
 				/* types setup */
-				if(setup.types) api.require(setup.types, function(){
-					async.eachSeries(arguments, function(type, cb){
-						type.init(config, cb);
-					}, routes);
-				}); else routes();
+				if(setup.types) async.eachSeries(setup.types, function(typePath, cb){
+					api.require([typePath], function(type){
+						type.init(function(path){
+							return prequire(type.path+'/node_modules/'+path);
+						}, config, cb);
+					});
+				}, routes);
+				else routes();
 			}
 		}
 		
