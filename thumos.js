@@ -11,6 +11,7 @@ var rmdir = require('rimraf');
 
 var api = {
 	db : {},
+	require : {},
 	init : function(config, callback){
 		/* setup db */
 		api.db = mongo(config.mongo);
@@ -24,8 +25,10 @@ var api = {
 		var paths = {
 			set : thumosPath+'loaders/set',
 			view : thumosPath+'loaders/view',
+			type : thumosPath+'loaders/type',
 			css : thumosPath+'loaders/css',
 			compat : thumosPath+'loaders/compat',
+			file : thumosPath+'lib/file',
 			text : components+'requirejs-text/text',
 			less : components+'require-less/less',
 				'less-builder' : components+'require-less/less-builder',
@@ -45,11 +48,19 @@ var api = {
 			waitSeconds : 0, //no timeout
 			paths : serverPaths
 		});
-
+		/* setup a separate context from the build, as that will fuck everything */
+		api.require = requirejs.config({
+			waitSeconds : 0, 
+			nodeRequire: require,
+        	context:'requirejsModuleLoading',
+			paths : serverPaths
+		});
+		var _ = requirejs('underscore');
 		/* destroy old build */
 		rmdir.sync(config.buildpath);
 		/* build client side for each  */
-		async.each(config.pages, function(page, cb){
+		var buildText = "";
+		async.eachSeries(config.pages, function(page, cb){
 			var out = config.buildpath+page.url+'index.js';
 			async.series([
 				function(c){ //make the directory for the page
@@ -85,72 +96,86 @@ var api = {
 						stubModules : ['text', 'css', 'normalize', 'less-builder'],
 						name : clientInit,
 						out : out,
-						insertRequire : [clientInit]
-					}, function(e){
-						console.log(e);
+						insertRequire : [clientInit],
+						allowSourceOverwrites: true
+					}, function(buildResponse){
+						buildText += buildResponse;
 						c();
 					});
 				}
 			], cb);
-		});
-		/* thumos global router setup */
-		var trouter = express.Router();
-		config.app.use(cookieParser("secret"));
-		config.app.use(config.route||'/', trouter);
-		/* setup authentication init */
-		config.auth.init(api.set, function(e, router){
-			config.app.use(router);
-		});
-		/* json parsing middlewrre */
-		var json = function(req, res, next){
-			bodyParser.json()(req, res, function(e){
-				if(e) res.json({error:'json'}); //catch some bullshit json
-				else next();
-			});
-		}
-		/* request error handler boilerplate */
-		function handle(res){
-			return function(e, response){
-				if(e) res.json({error : e});
-				else res.json(response);
-			}
-		}
-		/* set routes */
-		api.set(config.sets, function(){
-			async.each(arguments, function(set, cb){
-				var router = express.Router();
-				router.use(config.auth.verify);
-				router.route('/')
-					.get(function(req, res){ //list according to default query
-						set.find({}, handle(res));
-					})
-					.post(json, function(req, res){
-						//add new model(s) to set, return models
-						set.add(req.body, handle(res));
-					})
-					.put(json, function(req, res){
-						//update existing models, return models
-						set.update(req.body, handle(res));
-					});
-				router.route('/:ids')
-					.get(function(req, res){ //get models by id
-						set.get(req.params.ids.split(','), handle(res));
-					})
-					.delete(function(req, res){ //delete models by id
-						set.del(req.params.ids.split(','), handle(res));
-					});
-				/* setup find querying routes, property data sent via post. fuck the ReSt */
-				router.route('/q/:queryname').post(json, function(req, res){
-					set.query(req.params.queryname, req.body, handle(res));
-				});
-				/* find type query */
-				router.route('/find').post(json, function(req, res){
-					set.find(req.body, handle(res));
-				});
-				trouter.use(set.config.path||'/'+set.config.name, router);
-				cb();
-			}, function(){
+		}, function(e){
+			var lines = buildText.split('\n');
+			/* get the used sets and types, as those need their own setup process */
 			
+			var requiredSets = _.uniq(lines.filter(function(line){
+				return line.match(/^set!/);
+			}));
+			var requiredTypes = _.uniq(lines.filter(function(line){
+				return line.match(/^type!/);
+			}));	
+			
+			/* -----------------)setup sets and types(----------------- */
+			/* thumos global router setup */
+			var trouter = express.Router();
+			config.app.use(cookieParser("secret"));
+			config.app.use(config.route||'/', trouter);
+			/* setup authentication init */
+			config.auth.init(api.set, function(e, router){
+				config.app.use(router);
+			});
+			/* json parsing middlewrre */
+			var json = function(req, res, next){
+				bodyParser.json()(req, res, function(e){
+					if(e) res.json({error:'json'}); //catch some bullshit json
+					else next();
+				});
+			}
+			/* request error handler boilerplate */
+			function handle(res){
+				return function(e, response){
+					if(e) res.json({error : e});
+					else res.json(response);
+				}
+			}
+			
+			/* set routes */
+			if(requiredSets) api.set(requiredSets, function(){
+				async.eachSeries(arguments, function(set, cb){
+					var router = express.Router();
+					router.use(config.auth.verify);
+					router.route('/')
+						.get(function(req, res){ //list according to default query
+							set.find({}, handle(res));
+						})
+						.post(json, function(req, res){
+							//add new model(s) to set, return models
+							set.add(req.body, handle(res));
+						})
+						.put(json, function(req, res){
+							//update existing models, return models
+							set.update(req.body, handle(res));
+						});
+					router.route('/:ids')
+						.get(function(req, res){ //get models by id
+							set.get(req.params.ids.split(','), handle(res));
+						})
+						.delete(function(req, res){ //delete models by id
+							set.del(req.params.ids.split(','), handle(res));
+						});
+					/* setup find querying routes, property data sent via post. fuck the ReSt */
+					router.route('/q/:queryname').post(json, function(req, res){
+						set.query(req.params.queryname, req.body, handle(res));
+					});
+					/* find type query */
+					router.route('/find').post(json, function(req, res){
+						set.find(req.body, handle(res));
+					});
+					trouter.use(set.config.path||'/'+set.config.name, router);
+					cb();
+				}, function(){
+				
+				});
 			});
 		});
 	},
@@ -159,7 +184,7 @@ var api = {
 		setPaths = setPaths.map(function(setname){
 			return setname.match(/^set!/)?setname:'set!'+setname;
 		});
-		requirejs(setPaths, function(){
+		api.require(setPaths, function(){
 			for(var i in arguments){
 				var set = arguments[i];
 				/* pass in db api */

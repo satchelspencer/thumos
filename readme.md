@@ -26,7 +26,6 @@ setup a new thumos build given options:
   - `mongo` db info with auth if needed. see [mongo connection strings](http://docs.mongodb.org/manual/reference/connection-string/)
   - `buildpath` **path**: destination for the build files (should be accessible by static webserver)
   - `uglify` **boolean**: controls minification of source files (default false)
-  - `models` **array**: of paths to thumos models
   - `pages` **array**: of objects specifying build pages:
     - `title` title for page
     - `view` **path**: of thumos view modules
@@ -37,7 +36,7 @@ setup a new thumos build given options:
   - `app` **express app**: express app to build model routes on
   - `route` : base route for thumos (defaults to '/')
   - `auth` : [authentication plugin](#authentication)
-  - `plugins` **array**: of [plugins](#plugins)
+  - `types` **array**: of [property types](#custom-property-types) to be initiated
   
 example setup:
 ~~~
@@ -63,9 +62,6 @@ thumos.init({
   mongo : 'myapp',
   buildpath : 'build',
   uglify : false,
-	sets : [
-		'sets/things',
-	],
 	pages : [
 		{
 			title : 'My Thing',
@@ -110,6 +106,7 @@ model definitions have the following properties:
  - `name` model name (url friendly)
  - `properties` : object of properties, or [validator](#property-validators). properties can simply be a model or be defined as so:
    - `valid` : [validator function](#property-validators) that calls back with validity of property
+   - `type` : [property type](#custom-property-types)
    - `listed` : bool if model should be included in list
  - `functions` : object of custom functions
  
@@ -123,23 +120,12 @@ define({
 })
 ~~~
 
-## property type plugins
+## custom property types
 extend the functionality of a property. object with the following properties:
  - `init : function(config, callback)` setup function (server side) passed main thumos config file
- - `valid` [validator](#property-validators) only to
- - `handler : function()` 
-
-example use (in property list):
-~~~ javascript
-properties : {
-	profilePic : {
-		type : file({
-			
-		});
-	}
-}
-})
-~~~
+ - `encode : function(inp, callback)` function to encode data before storage
+ - `decode : function(inp, callback)` function to take stored data and return whatever you need
+ - `purge : function(id, callback)` function to delete external resources (optional)
 
 ## creating sets
 sets are a queryable, updateable collection of multiple models. they sync with the client and the server.
