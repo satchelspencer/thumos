@@ -104,45 +104,72 @@ var api = {
 					});
 				}
 			], cb);
-		}, function(e){
-			var lines = buildText.split('\n');
-			/* get the used sets and types, as those need their own setup process */
-			
-			var requiredSets = _.uniq(lines.filter(function(line){
-				return line.match(/^set!/);
-			}));
-			var requiredTypes = _.uniq(lines.filter(function(line){
-				return line.match(/^type!/);
-			}));	
-			
-			/* -----------------)setup sets and types(----------------- */
-			/* thumos global router setup */
-			var trouter = express.Router();
-			config.app.use(cookieParser("secret"));
-			config.app.use(config.route||'/', trouter);
-			/* setup authentication init */
-			config.auth.init(api.set, function(e, router){
-				config.app.use(router);
-			});
-			/* json parsing middlewrre */
-			var json = function(req, res, next){
-				bodyParser.json()(req, res, function(e){
-					if(e) res.json({error:'json'}); //catch some bullshit json
-					else next();
+		}, init);
+		/* express / misc init */
+		var setup = {};
+		function init(e){
+			if(e) callback(e);
+			else{
+				/* thumos global router setup */
+				var trouter = express.Router();
+				config.app.use(cookieParser("secret"));
+				config.app.use(config.route||'/', trouter);
+				
+				setup = {
+					/* prse buildtext to get required sets/types */
+					sets : _.uniq(buildText.split('\n').filter(function(line){
+						return line.match(/^set!/);
+					})),
+					types : _.uniq(buildText.split('\n').filter(function(line){
+						return line.match(/^type!/);
+					})),
+					express : {
+						router : trouter,
+						json : function(req, res, next){
+							bodyParser.json()(req, res, function(e){
+								if(e) res.json({error:'json'}); //catch some bullshit json
+								else next();
+							});
+						},
+						handle : function(res){
+							return function(e, response){
+								if(e) res.json({error : e});
+								else res.json(response);
+							}
+						}
+					}
+				};
+				
+				/* initialize authentication */
+				config.auth.init(api.set, function(e, router){
+					if(e) callback(e);
+					else{
+						config.app.use(router);
+						types();
+					}
 				});
 			}
-			/* request error handler boilerplate */
-			function handle(res){
-				return function(e, response){
-					if(e) res.json({error : e});
-					else res.json(response);
-				}
+		}
+		/* types setup */
+		function types(e){
+			if(e) callback(e);
+			else{
+				/* types setup */
+				if(setup.types) api.require(setup.types, function(){
+					async.eachSeries(arguments, function(type, cb){
+						type.init(config, cb);
+					}, routes);
+				}); else routes();
 			}
-			
+		}
+		
+		function routes(){
 			/* set routes */
-			if(requiredSets) api.set(requiredSets, function(){
+			if(setup.sets) api.set(setup.sets, function(){
 				async.eachSeries(arguments, function(set, cb){
 					var router = express.Router();
+					var json = setup.express.json;
+					var handle = setup.express.handle;
 					router.use(config.auth.verify);
 					router.route('/')
 						.get(function(req, res){ //list according to default query
@@ -171,13 +198,12 @@ var api = {
 					router.route('/find').post(json, function(req, res){
 						set.find(req.body, handle(res));
 					});
-					trouter.use(set.config.path||'/'+set.config.name, router);
+					setup.express.router.use(set.config.path||'/'+set.config.name, router);
 					cb();
-				}, function(){
-				
-				});
+				}, callback);
 			});
-		});
+			else callback();
+		}
 	},
 	/* require and setup some sets */
 	set : function(setPaths, callback){
