@@ -122,10 +122,13 @@ define({
 
 ## custom property types
 property types are npm modules that likely will do a mix of client and server tasks. as a result they must be npm modules installed in your main project. they can can have commonjs dependencies, but must be written in amd format returning an object of the following format see [thumos-file](https://github.com/satchelspencer/thumos-file) for an example: 
- - `init : function(nodeRequire, config, callback)` setup function (server side) passed a nodeRequire function that can require its own npm dependencies
+ - `name` for reference in urls and shit idk
+ - `init : function(nodeRequire, router, config, callback)` setup function (server side) passed a nodeRequire function that can require its own npm dependencies
  - `encode : function(inp, callback)` function to encode data before storage
  - `decode : function(inp, callback)` function to take stored data and return whatever you need
  - `purge : function(id, callback)` function to delete external resources (optional)
+
+if you don't need a server side setup you can omit the init function and require like any other module, or inline it. **idgaf**
 
 ## creating sets
 sets are a queryable, updateable collection of multiple models. they sync with the client and the server.

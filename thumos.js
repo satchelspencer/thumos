@@ -14,6 +14,18 @@ var api = {
 	db : {},
 	require : {},
 	init : function(config, callback){
+		var logger = {
+			oglog : console.log,
+			log : function(){
+				if(config.verbose) console.log.apply(this, arguments);
+			},
+			disable : function(){
+				console.log = function(){};
+			},
+			enable : function(){
+				console.log = logger.oglog;
+			}
+		}
 		/* setup db */
 		api.db = mongo(config.mongo);
 		/* misc */
@@ -29,6 +41,7 @@ var api = {
 			type : thumosPath+'loaders/type',
 			css : thumosPath+'loaders/css',
 			compat : thumosPath+'loaders/compat',
+			ajax : thumosPath+'lib/ajax',
 			text : components+'requirejs-text/text',
 			less : components+'require-less/less',
 				'less-builder' : components+'require-less/less-builder',
@@ -61,7 +74,9 @@ var api = {
 		rmdir.sync(config.buildpath);
 		/* build client side for each  */
 		var buildText = "";
+		logger.log('building pages:');
 		async.eachSeries(config.pages, function(page, cb){
+			logger.log(' - ', page.url);
 			var out = config.buildpath+page.url+'index.js';
 			async.series([
 				function(c){ //make the directory for the page
@@ -81,6 +96,7 @@ var api = {
 					fs.writeFile(config.buildpath+page.url+'index.html', $.html(), c);
 				},
 				function(c){
+					logger.disable();
 					requirejs.optimize({
 						basePath : './',
 						paths : paths,
@@ -100,6 +116,7 @@ var api = {
 						insertRequire : [clientInit],
 						allowSourceOverwrites: true
 					}, function(buildResponse){
+						logger.enable();
 						buildText += buildResponse;
 						c();
 					});
@@ -120,9 +137,6 @@ var api = {
 					/* prse buildtext to get required sets/types */
 					sets : _.uniq(buildText.split('\n').filter(function(line){
 						return line.match(/^set!/);
-					})),
-					types : _.uniq(buildText.split('\n').filter(function(line){
-						return line.match(/^type!/);
 					})),
 					express : {
 						router : trouter,
@@ -146,31 +160,17 @@ var api = {
 					if(e) callback(e);
 					else{
 						config.app.use(router);
-						types();
+						routes();
 					}
 				});
 			}
 		}
-		/* types setup */
-		function types(e){
-			if(e) callback(e);
-			else{
-				/* types setup */
-				if(setup.types) async.eachSeries(setup.types, function(typePath, cb){
-					api.require([typePath], function(type){
-						type.init(function(path){
-							return prequire(type.path+'/node_modules/'+path);
-						}, config, cb);
-					});
-				}, routes);
-				else routes();
-			}
-		}
-		
 		function routes(){
+			logger.log('routing sets:');
 			/* set routes */
 			if(setup.sets) api.set(setup.sets, function(){
 				async.eachSeries(arguments, function(set, cb){
+					logger.log(' - ', set.config.name);
 					var router = express.Router();
 					var json = setup.express.json;
 					var handle = setup.express.handle;
@@ -187,7 +187,7 @@ var api = {
 							//update existing models, return models
 							set.update(req.body, handle(res));
 						});
-					router.route('/:ids')
+					router.route('/i/:ids')
 						.get(function(req, res){ //get models by id
 							set.get(req.params.ids.split(','), handle(res));
 						})
@@ -202,8 +202,33 @@ var api = {
 					router.route('/find').post(json, function(req, res){
 						set.find(req.body, handle(res));
 					});
-					setup.express.router.use(set.config.path||'/'+set.config.name, router);
-					cb();
+					/* setup types where we need to */
+					var props = set.config.model.properties;
+					async.eachSeries(_.keys(props), function(propName, typeDone){
+						/* if the property has a custom type trigger its init */
+						if(props[propName].type){
+							var typeRouter = express.Router(); //create new router to be used by type
+							var type = props[propName].type;
+							logger.log('    - ('+type.name+')', propName);
+							type.init(api, prequire, function(path){
+								return prequire(type.path+'/node_modules/'+path);
+							}, typeRouter, config, set.config, propName, function(e){
+								/* type initialized callback */
+								if(e) typeDone(e);
+								else{
+									router.use('/'+propName, typeRouter); //add to the setrouter at the path /propname
+									typeDone();
+								}
+							});
+						}else typeDone();
+					}, function(e){
+						if(e) cb(e);
+						else{
+							/* add the setrouter to the main thumos router at its specified path or name */
+							setup.express.router.use(set.config.path||'/'+set.config.name, router);
+							cb();
+						}
+					});
 				}, callback);
 			});
 			else callback();
