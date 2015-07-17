@@ -30,6 +30,7 @@ setup a new thumos build given options:
     - `title` title for page
     - `view` **path**: of thumos view modules
     - `url` **path**: of page destination relative to website root
+    - `nocopy` **bool**: (optional) if true other files in the view directory will not be copied to buildpath
   - `paths` **object**: see http://requirejs.org/docs/api.html#config-paths
   - `shim` **object**: see http://requirejs.org/docs/api.html#config-shim
   - `html` **path**: to default html template to build pages from
@@ -124,9 +125,9 @@ define({
 property types are npm modules that likely will do a mix of client and server tasks. as a result they must be npm modules installed in your main project. they can can have commonjs dependencies, but must be written in amd format returning an object of the following format see [thumos-file](https://github.com/satchelspencer/thumos-file) for an example: 
  - `name` for reference in urls and shit idk
  - `init : function(nodeRequire, router, config, callback)` setup function (server side) passed a nodeRequire function that can require its own npm dependencies
- - `encode : function(inp, callback)` function to encode data before storage
+ - `encode : function(inp, callback)` takes input, which may contain raw or decoded if data. validate and return encoded format
  - `decode : function(inp, callback)` function to take stored data and return whatever you need
- - `purge : function(id, callback)` function to delete external resources (optional)
+ - `remove : function(inp, callback)` takes in encoded data and purges it
 
 if you don't need a server side setup you can omit the init function and require like any other module, or inline it. **idgaf**
 
@@ -186,6 +187,7 @@ thumos by default sets up an email/password based authentication mechanism. cook
 
 ## set api
 - `set.get(ids, callback)` retrieves models by id, calls back with [resultset](#resultset-api)
+- `set.getOne(id, callback)` retrieves model by id, calls back single model
 - `set.update(data, callback)` updates set, returns changed models
 - `set.del(ids, callback)` removes models by id, returns list of removed ids
 - `set.add(data, callback)` adds array of model data, calls back with added [resultset](#resultset-api)

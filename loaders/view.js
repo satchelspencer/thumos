@@ -16,7 +16,7 @@ define(function(){
 	}
 	return {
 		load : function(name, req, onload, config, isBuild){
-			req([name], function(mod){ //require the view definition
+			req([name+'/index'], function(mod, m){ //require the view definition
 				onload(isBuild?null:view(mod));
 			})
 		}

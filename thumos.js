@@ -3,12 +3,12 @@ var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
 var cheerio = require('cheerio');
 var express = require('express');
-var fs = require('fs');
+var fs = require('fs-extra');
+var lookup = require('module-lookup-amd');
 var mongo = require('./lib/db');
-var mkdirp = require('mkdirp');
+var path = require('path');
 var prequire = require('parent-require');
 var requirejs = require('requirejs');
-var rmdir = require('rimraf');
 
 var api = {
 	db : {},
@@ -38,6 +38,7 @@ var api = {
 		var paths = {
 			set : thumosPath+'loaders/set',
 			view : thumosPath+'loaders/view',
+			dir : thumosPath+'loaders/dir',
 			type : thumosPath+'loaders/type',
 			css : thumosPath+'loaders/css',
 			compat : thumosPath+'loaders/compat',
@@ -62,25 +63,29 @@ var api = {
 			nodeRequire: require
 		});
 		/* setup a separate context from the build, as that will fuck everything */
-		api.require = requirejs.config({
+		var nodeRJSConfig = {
 			waitSeconds : 0, 
 			nodeRequire: require,
         	context:'requirejsModuleLoading',
 			paths : serverPaths,
-		    nodeRequire: require
-		});
+		    nodeRequire: require,
+		};
+		
+		/* hmm */
+		nodeRJSConfig.paths.jquery = thumosPath+'lib/null';
+		nodeRJSConfig.paths['plugins/cookie'] = thumosPath+'lib/null';
+		
+		api.require = requirejs.config(nodeRJSConfig);
 		var _ = requirejs('underscore');
-		/* destroy old build */
-		rmdir.sync(config.buildpath);
 		/* build client side for each  */
 		var buildText = "";
 		logger.log('building pages:');
 		async.eachSeries(config.pages, function(page, cb){
-			logger.log(' - ', page.url);
+			logger.log(' - ', page.url, '('+page.title+')');
 			var out = config.buildpath+page.url+'index.js';
 			async.series([
 				function(c){ //make the directory for the page
-					mkdirp(config.buildpath+page.url, c);
+					fs.emptyDir(config.buildpath+page.url, c);
 				}, 
 				function(c){ //create the root symlink to thumos components
 					fs.symlink('./', config.buildpath+'/_', c);
@@ -97,16 +102,10 @@ var api = {
 				},
 				function(c){
 					logger.disable();
+					paths.init = page.view;
 					requirejs.optimize({
 						basePath : './',
 						paths : paths,
-						packages : [
-							{
-								name : 'init',
-								location : page.view,
-								main : 'index' 
-							}
-						],
 						shim : config.shim||{},
 						preserveLicenseComments: !config.uglify,
 						optimize : config.uglify?'uglify':'none',
@@ -116,9 +115,31 @@ var api = {
 						insertRequire : [clientInit],
 						allowSourceOverwrites: true
 					}, function(buildResponse){
+						buildText += buildResponse; //append build output
 						logger.enable();
-						buildText += buildResponse;
-						c();
+						/* parse build output for required views */
+						var views = _.uniq(buildText.split('\n').filter(function(line){
+							return line.match(/^view!/);
+						}));
+						nodeRJSConfig.paths.init = page.view; //add in the init viewpath					
+						if(page.nocopy) c(); //page.nocopy can disable this
+						else async.eachSeries(views, function(view, viewDone){
+							var viewDir = lookup(nodeRJSConfig, view, './'); //get real path of view directory
+							/* copy all files from view directory into the buildpath */
+							fs.readdir(viewDir, function(e, list){
+							 	list = _.without(list, 'index.js');
+								if(list.length) logger.log('    copying', viewDir+':');
+								async.eachSeries(list, function(file, copyDone){
+									logger.log('     -', file);
+									var dest = path.join(path.dirname(out), file);
+									if(fs.existsSync(dest)) copyDone(file+' already exists'); //make sure there is no overlap
+									else fs.copy(path.join(viewDir, file), dest, copyDone); //copy over
+								}, viewDone);
+							});
+						}, c)						
+					}, function(buildErr){
+						logger.enable();
+						callback(buildErr);
 					});
 				}
 			], cb);
@@ -132,7 +153,7 @@ var api = {
 				var trouter = express.Router();
 				config.app.use(cookieParser("secret"));
 				config.app.use(config.route||'/', trouter);
-				
+												
 				setup = {
 					/* prse buildtext to get required sets/types */
 					sets : _.uniq(buildText.split('\n').filter(function(line){
@@ -210,7 +231,7 @@ var api = {
 							var typeRouter = express.Router(); //create new router to be used by type
 							var type = props[propName].type;
 							logger.log('    - ('+type.name+')', propName);
-							type.init(api, prequire, function(path){
+							type.init(api, set, prequire, function(path){
 								return prequire(type.path+'/node_modules/'+path);
 							}, typeRouter, config, set.config, propName, function(e){
 								/* type initialized callback */
