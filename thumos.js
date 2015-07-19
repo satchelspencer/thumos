@@ -60,7 +60,7 @@ var api = {
 		requirejs.config({
 			waitSeconds : 0, //no timeout
 			paths : serverPaths,
-			nodeRequire: require
+			nodeRequire: require			
 		});
 		/* setup a separate context from the build, as that will fuck everything */
 		var nodeRJSConfig = {
@@ -101,7 +101,7 @@ var api = {
 					fs.writeFile(config.buildpath+page.url+'index.html', $.html(), c);
 				},
 				function(c){
-					logger.disable();
+					//logger.disable();
 					paths.init = page.view;
 					requirejs.optimize({
 						basePath : './',

@@ -38,6 +38,7 @@ setup a new thumos build given options:
   - `route` : base route for thumos (defaults to '/')
   - `auth` : [authentication plugin](#authentication)
   - `types` **array**: of [property types](#custom-property-types) to be initiated
+  - `include` **array**: of paths to be included in build directory
   
 example setup:
 ~~~
@@ -84,17 +85,24 @@ thumos.init({
 ## creating views
 view objects have the following properties:
   - `html`: dom to be inserted at render
+  - `insert` object of `tagname : view or dom` replaces all occurances of `<#tagname>` with the specified view
   - `init(options)` **fn**: init callback. `this` contains view api
 
 example definition:
 ~~~ javascript
 define([
 	'text!./index.html', //html dep
-	'model!models/contacts'
+	'set!sets/contacts',
+	'view!another_view',
 	'css!./index', //css dep
-], function(template, contacts){  
+], function(template, contacts, subview){  
 	return {
 		hmtl : template,
+		insert : {
+			thingy : subview.render({
+				option : 'no'
+			})
+		}
 		init : function(options){
 			
 		}
