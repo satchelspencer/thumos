@@ -1,7 +1,7 @@
 define(function(){
 	/* builder function that creates a client side view interface */
 	function view(config){
-		return {
+		var api = {
 			dom : {},
 			$ : function(selecta){
 				return this.dom.find(selecta);
@@ -26,8 +26,19 @@ define(function(){
 				/* now initalize our view since its children are done */
 				config.init.call(this, options);
 				return dom;
+			},
+			fn : {}
+		};
+		function proxy(fnName){
+			return function(){
+				config.fn[fnName].apply(api, arguments);
 			}
 		}
+		/* setup or custom functions */
+		if(config && config.fn) for(var fnName in config.fn){
+			api.fn[fnName] = proxy(fnName);
+		}
+		return api;
 
 	}
 	return {

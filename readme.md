@@ -87,6 +87,7 @@ view objects have the following properties:
   - `html`: dom to be inserted at render
   - `insert` object of `tagname : view or dom` replaces all occurances of `<#tagname>` with the specified view
   - `init(options)` **fn**: init callback. `this` contains view api
+  - `fn` : object of functions. that will be appended to the view api at `view.fn.fnName` also accessible from init function
 
 example definition:
 ~~~ javascript
