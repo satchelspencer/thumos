@@ -125,17 +125,23 @@ var api = {
 						if(page.nocopy) c(); //page.nocopy can disable this
 						else async.eachSeries(views, function(view, viewDone){
 							var viewDir = lookup(nodeRJSConfig, view, './'); //get real path of view directory
-							/* copy all files from view directory into the buildpath */
-							fs.readdir(viewDir, function(e, list){
-							 	list = _.without(list, 'index.js');
-								if(list.length) logger.log('    copying', viewDir+':');
-								async.eachSeries(list, function(file, copyDone){
-									logger.log('     -', file);
-									var dest = path.join(path.dirname(out), file);
-									if(fs.existsSync(dest)) copyDone(file+' already exists'); //make sure there is no overlap
-									else fs.copy(path.join(viewDir, file), dest, copyDone); //copy over
-								}, viewDone);
+							var configPath = path.join(viewDir, 'config.json');
+							/* check for a view conf file */
+							if(fs.existsSync(configPath)) fs.readFile(configPath, function(e, configJSON){
+								if(e) viewDone(e);
+								else{
+									var viewConfig = JSON.parse(configJSON);
+									/* copy specified paths into the build directory */
+									if(viewConfig.include) async.eachSeries(viewConfig.include, function(file, copyDone){
+										logger.log('     - copying:', file);
+										var dest = path.join(path.dirname(out), file);
+										if(fs.existsSync(dest)) copyDone(file+' already exists'); //make sure there is no overlap
+										else fs.copy(path.join(viewDir, file), dest, copyDone); //copy over
+									}, viewDone); 
+									else viewDone();
+								}
 							});
+							else viewDone();
 						}, c)						
 					}, function(buildErr){
 						logger.enable();

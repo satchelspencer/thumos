@@ -111,6 +111,9 @@ define([
 })
 ~~~
 
+you may also include a `config.json` in the view directory with the following options:
+ - `include` array of paths (inside the view directory) to be copied to the build directory
+
 ## creating models
 model definitions have the following properties:
  - `name` model name (url friendly)
