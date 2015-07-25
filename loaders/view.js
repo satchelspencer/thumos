@@ -27,11 +27,25 @@ define(function(){
 				config.init.call(this, options);
 				return dom;
 			},
-			fn : {}
+			fn : {},
+			events : {},
+			/* event registering on views */
+			on : function(event, callback){
+				api.events[event] = api.events[event]||[];
+				api.events[event].push(callback);
+			},
+			off : function(event){
+				delete api.events[event];
+			},
+			trigger : function(event, value){
+				if(api.events[event]) api.events[event].forEach(function(callback){
+					callback(value);
+				});
+			}	
 		};
 		function proxy(fnName){
 			return function(){
-				config.fn[fnName].apply(api, arguments);
+				return config.fn[fnName].apply(api, arguments);
 			}
 		}
 		/* setup or custom functions */

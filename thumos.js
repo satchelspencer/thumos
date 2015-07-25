@@ -133,7 +133,7 @@ var api = {
 									var viewConfig = JSON.parse(configJSON);
 									/* copy specified paths into the build directory */
 									if(viewConfig.include) async.eachSeries(viewConfig.include, function(file, copyDone){
-										logger.log('     - copying:', file);
+										logger.log('     - ', file);
 										var dest = path.join(path.dirname(out), file);
 										if(fs.existsSync(dest)) copyDone(file+' already exists'); //make sure there is no overlap
 										else fs.copy(path.join(viewDir, file), dest, copyDone); //copy over
