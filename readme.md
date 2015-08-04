@@ -12,7 +12,7 @@ it does some serious shit
    - [`models`](#model-api)
    - [`sets`](#set-api)
  - [`loaders`](#included-loaders)
-   - [`css`](#css-loader)
+   - [`style`](#style-loader)
    - [`compat`](#compat-loader)
    - [`view`](#view-loader)
    - [`set`](#set-loader)
@@ -96,7 +96,7 @@ define([
 	'text!./index.html', //html dep
 	'set!sets/contacts',
 	'view!another_view',
-	'css!./index', //css dep
+	'style!./index', //css dep
 ], function(template, contacts, subview){  
 	return {
 		hmtl : template,
@@ -224,7 +224,7 @@ these events are called when certain api actions occur. your events dont have to
 # Included Loaders
 requirejs loaders/plugins
 
-## css loader
+## style loader
 load, parse, minify and parse css/less for use in views (or whatever you're into). depends on [require-less](https://github.com/guybedford/require-less)
 
 ## compat loader
@@ -247,6 +247,7 @@ require a type plugin
  - [requirejs](http://requirejs.org/) core of loading/build
    - [requirejs-text](https://github.com/requirejs/text) load text/html
    - [require-less](https://github.com/guybedford/require-less) require css/less and build
+   - [require-css](https://github.com/guybedford/require-less) require plain css and build
      - [csso](https://github.com/css/csso) css optimizer/minifier
      - [less](http://lesscss.org/) less parser
    - [deasync](https://github.com/abbr/deasync) bodge-enabler for doing crazy requirejs shit
