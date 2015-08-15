@@ -58,6 +58,7 @@ var api = {
 		/* overload all paths with user set config paths */
 		var serverPaths = {};
 		for(var key in config.paths) paths[key] = config.paths[key];
+		for(var name in config.types) paths[name] = config.types[name].path||config.types[name];
 		for(var key in paths) serverPaths[key] = paths[key];
 		/* config requirejs (only in node does not apply to ) */
 		requirejs.config({
@@ -108,6 +109,7 @@ var api = {
 					paths.init = page.view;
 					requirejs.optimize({
 						basePath : './',
+						wrapShim : true,
 						paths : paths,
 						shim : config.shim||{},
 						preserveLicenseComments: !config.uglify,
@@ -168,6 +170,10 @@ var api = {
 					sets : _.uniq(buildText.split('\n').filter(function(line){
 						return line.match(/^set!/);
 					})),
+					types : _.uniq(buildText.split('\n').filter(function(line){
+						return line.match(/^type!/);
+					})),
+					typeapis : {},
 					express : {
 						router : trouter,
 						json : function(req, res, next){
@@ -185,21 +191,34 @@ var api = {
 					}
 				};
 				
-				/* initialize authentication */
-				config.auth.init(api.set, function(e, router){
-					if(e) callback(e);
-					else{
-						config.app.use(router);
-						routes();
-					}
-				});
+				logger.log('setup types:');
+				/* find all the types with server side initialization */
+				config.activeTypes = {};
+				for(var type in config.types){
+					if(config.types[type].server) config.activeTypes[type] = prequire(config.types[type].server)(config.types[type].config);
+				}
+				/* call init on these types */
+				async.each(_.keys(config.activeTypes), function(type, typeComplete){
+					logger.log(' - ', type);
+					config.activeTypes[type].init(config, typeComplete);
+				}, function(e){
+					/* initialize authentication */
+					config.auth.init(api.set, config, function(e, router){
+						if(e) callback(e);
+						else{
+							config.app.use(router);
+							routes();
+						}
+					});
+				});				
 			}
 		}
 		function routes(){
 			logger.log('routing sets:');
 			/* set routes */
-			if(setup.sets) api.set(setup.sets, function(){
-				async.eachSeries(arguments, function(set, cb){
+			if(setup.sets) api.set(setup.sets, config, function(){
+				var sets = arguments;
+				async.eachSeries(sets, function(set, cb){
 					logger.log(' - ', set.config.name);
 					var router = express.Router();
 					var json = setup.express.json;
@@ -232,52 +251,29 @@ var api = {
 					router.route('/find').post(json, function(req, res){
 						set.find(req.body, handle(res));
 					});
-					/* setup types where we need to */
-					var props = set.config.model.properties;
-					async.eachSeries(_.keys(props), function(propName, typeDone){
-						/* if the property has a custom type trigger its init */
-						if(props[propName].type){
-							var typeRouter = express.Router(); //create new router to be used by type
-							var type = props[propName].type;
-							logger.log('    - ('+type.name+')', propName);
-							type.init(api, set, prequire, function(path){
-								return prequire(type.path+'/node_modules/'+path);
-							}, typeRouter, config, set.config, propName, function(e){
-								/* type initialized callback */
-								if(e) typeDone(e);
-								else{
-									router.use('/'+propName, typeRouter); //add to the setrouter at the path /propname
-									typeDone();
-								}
-							});
-						}else typeDone();
-					}, function(e){
-						if(e) cb(e);
-						else{
-							/* add the setrouter to the main thumos router at its specified path or name */
-							setup.express.router.use(set.config.path||'/'+set.config.name, router);
-							cb();
-						}
-					});
+					/* add the setrouter to the main thumos router at its specified path or name */
+					setup.express.router.use(set.config.path||'/'+set.config.name, router);
+					cb();
 				}, callback);
 			});
 			else callback();
 		}
 	},
 	/* require and setup some sets */
-	set : function(setPaths, callback){
+	set : function(setPaths, config, callback){
 		setPaths = setPaths.map(function(setname){
 			return setname.match(/^set!/)?setname:'set!'+setname;
 		});
 		api.require(setPaths, function(){
 			for(var i in arguments){
-				var set = arguments[i];
+				var set = arguments[i](config); //pass in the server side config
 				/* pass in db api */
 				set.db = {
 					collection : api.db.collection(set.config.collection||set.config.name),
 					id : api.db.id,
 					str : api.db.str
 				}
+				arguments[i] = set;
 			}
 			callback.apply(this, arguments);
 		});
