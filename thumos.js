@@ -14,6 +14,7 @@ var api = {
 	db : {},
 	require : {},
 	init : function(config, callback){
+		api.config = config;
 		var logger = {
 			oglog : console.log,
 			log : function(){
@@ -36,7 +37,7 @@ var api = {
 		var clientInit = thumosPath+'client/init';
 		/* by default use thumos' included plugins */
 		var paths = {
-			allsets : thumosPath+'require/allsets',
+			container : thumosPath+'require/container',
 			setRequire : thumosPath+'require/index',
 			set : thumosPath+'loaders/set',
 			view : thumosPath+'loaders/view',
@@ -209,62 +210,62 @@ var api = {
 				async.each(_.keys(config.activeTypes), function(type, typeComplete){
 					logger.log(' - ', type);
 					config.activeTypes[type].init(config, typeComplete);
-				}, function(e){
-					/* initialize authentication */
-					config.auth.init(api.set, config, function(e, router){
-						if(e) callback(e);
-						else{
-							config.app.use(router);
-							routes();
-						}
-					});
-				});				
+				}, routes);				
 			}
 		}
 		function routes(){
-			logger.log('routing sets:');
-			/* set routes */
-			if(setup.sets) api.set(setup.sets, config, function(){
-				var sets = arguments;
-				async.eachSeries(sets, function(set, cb){
-					logger.log(' - ', set.config.name);
-					var router = express.Router();
-					var json = setup.express.json;
-					var handle = setup.express.handle;
-					router.use(config.auth.verify);
-					router.route('/')
-						.get(function(req, res){ //list according to default query
-							set.find({}, handle(res));
-						})
-						.post(json, function(req, res){
-							//add new model(s) to set, return models
-							set.add(req.body, handle(res));
-						})
-						.put(json, function(req, res){
-							//update existing models, return models
-							set.update(req.body, handle(res));
-						});
-					router.route('/i/:ids')
-						.get(function(req, res){ //get models by id
-							set.get(req.params.ids.split(','), handle(res));
-						})
-						.delete(function(req, res){ //delete models by id
-							set.del(req.params.ids.split(','), handle(res));
-						});
-					/* setup find querying routes, property data sent via post. fuck the ReSt */
-					router.route('/q/:queryname').post(json, function(req, res){
-						set.query(req.params.queryname, req.body, handle(res));
-					});
-					/* find type query */
-					router.route('/find').post(json, function(req, res){
-						set.find(req.body, handle(res));
-					});
-					/* add the setrouter to the main thumos router at its specified path or name */
-					setup.express.router.use(set.config.path||'/'+set.config.name, router);
-					cb();
-				}, callback);
+			/* get the setrequirererr */
+			api.require(['setRequire', 'container'].concat(config.sets), function(setRequire, container){ //add config.sets
+				container.thumos = api; //so setrequire knows what the fuck is up
+				
+				logger.log('setup authentication');
+				/* initialize authentication */
+				config.auth.init(setRequire, config, function(e, router){
+					if(e) callback(e);
+					else{
+						config.app.use(router);
+						/* ROUTING SETS */
+						logger.log('routing sets:');
+						async.eachSeries(_.keys(container.sets), function(setName, cb){
+							var set = setRequire(setName); //get the set
+							
+							logger.log(' - ', setName);
+							var router = express.Router();
+							var json = setup.express.json;
+							var handle = setup.express.handle;
+							router.use(config.auth.verify);
+							router.route('/')
+								.get(function(req, res){ //list according to default query
+									set.find({}, handle(res));
+								})
+								.post(json, function(req, res){
+									//add new model(s) to set, return models
+									set.add(req.body, handle(res));
+								})
+								.put(json, function(req, res){
+									//update existing models, return models
+									set.update(req.body, handle(res));
+								});
+							router.route('/i/:ids')
+								.get(function(req, res){ //get models by id
+									set.get(req.params.ids.split(','), handle(res));
+								})
+								.delete(function(req, res){ //delete models by id
+									set.del(req.params.ids.split(','), handle(res));
+								});
+							router.route('/q/:queryname').post(json, function(req, res){
+								set.query(req.params.queryname, req.body, handle(res));
+							});
+							router.route('/find').post(json, function(req, res){
+								set.find(req.body, handle(res));
+							});
+							setup.express.router.use(set.config.path||'/'+set.config.name, router);
+							cb();
+						}, callback);
+						
+					}
+				});
 			});
-			else callback();
 		}
 	},
 	/* require and setup some sets */
@@ -286,6 +287,7 @@ var api = {
 			callback.apply(this, arguments);
 		});
 	},
+	config : {}, //set to init config
 	auth : require('./lib/auth')
 }
 module.exports = api;
