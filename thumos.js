@@ -36,6 +36,8 @@ var api = {
 		var clientInit = thumosPath+'client/init';
 		/* by default use thumos' included plugins */
 		var paths = {
+			allsets : thumosPath+'require/allsets',
+			setRequire : thumosPath+'require/index',
 			set : thumosPath+'loaders/set',
 			view : thumosPath+'loaders/view',
 			dir : thumosPath+'loaders/dir',
@@ -55,6 +57,10 @@ var api = {
 			async : components+'async/lib/async',
 			underscore : components+'underscore/underscore'
 		}
+		/* init config.sets properly so that it goes through the `set!` plugin */
+		config.sets = config.sets?config.sets.map(function(setname){
+			return 'set!'+setname;
+		}):[];
 		/* overload all paths with user set config paths */
 		var serverPaths = {};
 		for(var key in config.paths) paths[key] = config.paths[key];
@@ -100,6 +106,7 @@ var api = {
 					});
 					$('title').text(page.title);
 					$('head').append("<script data-main=\"./index.js\">"+reqjs+"\
+						//console.log('odb');\
 						require.config(JSON.parse('"+JSON.stringify({})+"'));\
 					</script>");
 					fs.writeFile(config.buildpath+page.url+'index.html', $.html(), c);
@@ -117,7 +124,8 @@ var api = {
 						stubModules : ['text', 'style', 'less', 'css-builder', 'css', 'normalize', 'less-builder'],
 						name : clientInit,
 						out : out,
-						insertRequire : [clientInit],
+						include : config.sets, //include the definitions for each set name
+						insertRequire : [clientInit].concat(config.sets), //require the above definitions (once) so they get picked up by the plugin and put into the global object
 						allowSourceOverwrites: true
 					}, function(buildResponse){
 						buildText += buildResponse; //append build output
