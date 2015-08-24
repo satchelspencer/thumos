@@ -2,7 +2,8 @@
 define(function(){
 	var container = {
 		thumos : null,
-		sets : {}
+		sets : {},
+		nodeRequire : {}
 	};
 	return container;
 });

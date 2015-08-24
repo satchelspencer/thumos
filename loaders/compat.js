@@ -1,9 +1,12 @@
 /* build only takes in a compat format file */
-define(function(){
+define(['container'], function(container){
 	return {
 		load : function(name, req, onload, config, isBuild){
-			var suffix = typeof window != 'undefined'||config.isBuild?'Client':'';
-			req([name+suffix], onload);
+			var client = typeof window != 'undefined'||config.isBuild;
+			var suffix = client?'Client':'';
+			req([name+suffix], function(module){
+				onload(client?module:module(container.nodeRequire));
+			});
 		}
 	}
 });

@@ -199,26 +199,29 @@ var api = {
 						}
 					}
 				};
-				
-				logger.log('setup types:');
-				/* find all the types with server side initialization */
-				config.activeTypes = {};
-				for(var type in config.types){
-					if(config.types[type].server) config.activeTypes[type] = prequire(config.types[type].server)(config.types[type].config);
-				}
-				/* call init on these types */
-				async.each(_.keys(config.activeTypes), function(type, typeComplete){
-					logger.log(' - ', type);
-					config.activeTypes[type].init(config, typeComplete);
-				}, routes);				
+				/* get the container set */
+				api.require(['container'], function(container){
+					container.nodeRequire = prequire;
+					container.thumos = api; //so setrequire knows what the fuck is up
+					
+					logger.log('setup types:');
+					/* find all the types with server side initialization */
+					config.activeTypes = {};
+					for(var type in config.types){
+						if(config.types[type].server) config.activeTypes[type] = prequire(config.types[type].server)(config.types[type].config);
+					}
+					/* call init on these types */
+					async.each(_.keys(config.activeTypes), function(type, typeComplete){
+						logger.log(' - ', type);
+						config.activeTypes[type].init(config, typeComplete);
+					}, routes);
+				});
 			}
 		}
 		function routes(){
 			/* get the setrequirererr */
-			api.require(['setRequire', 'container'].concat(config.sets), function(setRequire, container){ //add config.sets
-				container.thumos = api; //so setrequire knows what the fuck is up
-				
-				logger.log('setup authentication');
+			api.require(['setRequire', 'container'].concat(config.sets), function(setRequire, container){ //add config.sets				
+				logger.log('setup authentication:');
 				/* initialize authentication */
 				config.auth.init(setRequire, config, function(e, router){
 					if(e) callback(e);
@@ -256,8 +259,12 @@ var api = {
 							router.route('/q/:queryname').post(json, function(req, res){
 								set.query(req.params.queryname, req.body, handle(res));
 							});
+							/* find and search simply passit to their server side counterparts */
 							router.route('/find').post(json, function(req, res){
 								set.find(req.body, handle(res));
+							});
+							router.route('/search').post(json, function(req, res){
+								set.search(req.body, handle(res));
 							});
 							setup.express.router.use(set.config.path||'/'+set.config.name, router);
 							cb();
@@ -267,25 +274,6 @@ var api = {
 				});
 			});
 		}
-	},
-	/* require and setup some sets */
-	set : function(setPaths, config, callback){
-		setPaths = setPaths.map(function(setname){
-			return setname.match(/^set!/)?setname:'set!'+setname;
-		});
-		api.require(setPaths, function(){
-			for(var i in arguments){
-				var set = arguments[i](config); //pass in the server side config
-				/* pass in db api */
-				set.db = {
-					collection : api.db.collection(set.config.collection||set.config.name),
-					id : api.db.id,
-					str : api.db.str
-				}
-				arguments[i] = set;
-			}
-			callback.apply(this, arguments);
-		});
 	},
 	config : {}, //set to init config
 	auth : require('./lib/auth')
