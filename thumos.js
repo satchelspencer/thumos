@@ -1,242 +1,149 @@
 var async = require('async');
+var bilt = require('bilt');
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
 var cheerio = require('cheerio');
 var express = require('express');
 var fs = require('fs-extra');
-var lookup = require('module-lookup-amd');
 var mongo = require('./lib/db');
 var path = require('path');
-var prequire = require('parent-require');
-var requirejs = require('requirejs');
+var _ = require('underscore');
+var d = require('datauri');
+
+function local(fpath){
+	return path.join(__dirname, fpath);
+}
 
 var api = {
-	db : {},
-	require : {},
 	init : function(config, callback){
-		api.config = config;
-		var logger = {
-			oglog : console.log,
-			log : function(){
-				if(config.verbose) console.log.apply(this, arguments);
-			},
-			disable : function(){
-				console.log = function(){};
-			},
-			enable : function(){
-				console.log = logger.oglog;
-			}
-		}
-		/* setup db */
-		api.db = mongo(config.mongo);
-		/* misc */
-		var thumosPath = config.thumosPath||'node_modules/thumos/';
-		var components = thumosPath+'bower_components/';
-		var html = fs.readFileSync(config.html||thumosPath+'client/def.html'); //html to populate
-		var reqjs = fs.readFileSync(components+'requirejs/require.js');
-		var clientInit = thumosPath+'client/init';
-		/* by default use thumos' included plugins */
 		var paths = {
-			container : thumosPath+'require/container',
-			setRequire : thumosPath+'require/index',
-			set : thumosPath+'loaders/set',
-			view : thumosPath+'loaders/view',
-			dir : thumosPath+'loaders/dir',
-			type : thumosPath+'loaders/type',
-			style : thumosPath+'loaders/style',
-			compat : thumosPath+'loaders/compat',
-			ajax : thumosPath+'lib/ajax',
-			text : components+'requirejs-text/text',
-			less : components+'require-less/less',
-				'less-builder' : components+'require-less/less-builder',
-				normalize : components+'require-less/normalize',
-			css : components+'require-css/css',
-				'css-builder' : components+'require-css/css-builder',
-				normalize : components+'require-css/normalize',
-			crc32 : thumosPath+'node_modules/crc-32/crc32',
-			jquery : components+'jQuery/dist/jquery.min',
-			async : components+'async/lib/async',
-			underscore : components+'underscore/underscore'
-		}
-		/* init config.sets properly so that it goes through the `set!` plugin */
-		config.sets = config.sets?config.sets.map(function(setname){
-			return 'set!'+setname;
-		}):[];
-		/* overload all paths with user set config paths */
-		var serverPaths = {};
-		for(var key in config.paths) paths[key] = config.paths[key];
-		for(var name in config.types) paths[name] = config.types[name].path||config.types[name];
-		for(var key in paths) serverPaths[key] = paths[key];
-		/* config requirejs (only in node does not apply to ) */
-		requirejs.config({
-			waitSeconds : 0, //no timeout
-			paths : serverPaths,
-			nodeRequire: require			
-		});
-		/* setup a separate context from the build, as that will fuck everything */
-		var nodeRJSConfig = {
-			waitSeconds : 0, 
-			nodeRequire: require,
-        	context:'requirejsModuleLoading',
-			paths : serverPaths,
-		    nodeRequire: require,
+			'datauri' : local('load/datauri.js'),
+			'css' : local('load/css.js'),
+			'text' : local('load/text.js'),
+			'render' : local('lib/render.js'),
+			'html' : local('load/html.js'),
+			'view' : local('load/view.js'),
+			'set' : {
+				source : local('load/set.js'),
+				nodePath : local('load/setNode.js')
+			},
+			'include' : local('load/include.js'),
+			'ajax' : local('lib/ajax.js'),
+			'validator' : local('lib/validator.js'),
+			'jquery' : {
+				source : 'https://code.jquery.com/jquery-1.11.3.min.js',
+				export : '$'
+			},
+			'underscore' : {
+				source : 'https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js',
+				export : '_'
+			},
+			'async' : {
+				source : local('bower_components/async/dist/async.min.js'),
+				export : 'async',
+				minify : true
+			},
+			'crc32' : {
+				source : 'crc-32',
+				export : 'CRC32',
+				minify : true
+			}
 		};
-		
-		/* hmm */
-		nodeRJSConfig.paths.jquery = thumosPath+'lib/null';
-		nodeRJSConfig.paths['plugins/cookie'] = thumosPath+'lib/null';
-		
-		api.require = requirejs.config(nodeRJSConfig);
-		var _ = requirejs('underscore');
-		/* build client side for each  */
-		var buildText = "";
-		logger.log('building pages:');
-		async.eachSeries(config.pages, function(page, cb){
-			logger.log(' - ', page.url, '('+page.title+')');
-			var out = config.buildpath+page.url+'index.js';
-			async.series([
-				function(c){ //make the directory for the page
-					fs.emptyDir(config.buildpath+page.url, c);
-				}, 
-				function(c){ //create the root symlink to thumos components
-					fs.symlink('./', config.buildpath+'/_', c);
-				},
-				function(c){ //make and write our html
-					var $ = cheerio.load(html, {
-						normalizeWhitespace : config.uglify
-					});
-					$('title').text(page.title);
-					$('head').append("<script data-main=\"./index.js\">"+reqjs+"\
-						//console.log('odb');\
-						require.config(JSON.parse('"+JSON.stringify({})+"'));\
-					</script>");
-					fs.writeFile(config.buildpath+page.url+'index.html', $.html(), c);
-				},
-				function(c){
-					//logger.disable();
-					paths.init = page.view;
-					requirejs.optimize({
-						basePath : './',
-						wrapShim : true,
-						paths : paths,
-						shim : config.shim||{},
-						preserveLicenseComments: !config.uglify,
-						optimize : config.uglify?'uglify':'none',
-						stubModules : ['text', 'style', 'less', 'css-builder', 'css', 'normalize', 'less-builder'],
-						name : clientInit,
-						out : out,
-						include : config.sets, //include the definitions for each set name
-						insertRequire : [clientInit].concat(config.sets), //require the above definitions (once) so they get picked up by the plugin and put into the global object
-						allowSourceOverwrites: true
-					}, function(buildResponse){
-						buildText += buildResponse; //append build output
-						logger.enable();
-						/* parse build output for required views */
-						var views = _.uniq(buildText.split('\n').filter(function(line){
-							return line.match(/^view!/);
-						}));
-						nodeRJSConfig.paths.init = page.view; //add in the init viewpath					
-						if(page.nocopy) c(); //page.nocopy can disable this
-						else async.eachSeries(views, function(view, viewDone){
-							var viewDir = lookup(nodeRJSConfig, view, './'); //get real path of view directory
-							var configPath = path.join(viewDir, 'config.json');
-							/* check for a view conf file */
-							if(fs.existsSync(configPath)) fs.readFile(configPath, function(e, configJSON){
-								if(e) viewDone(e);
-								else{
-									var viewConfig = JSON.parse(configJSON);
-									/* copy specified paths into the build directory */
-									if(viewConfig.include) async.eachSeries(viewConfig.include, function(file, copyDone){
-										logger.log('     - ', file);
-										var dest = path.join(path.dirname(out), file);
-										if(fs.existsSync(dest)) copyDone(file+' already exists'); //make sure there is no overlap
-										else fs.copy(path.join(viewDir, file), dest, copyDone); //copy over
-									}, viewDone); 
-									else viewDone();
-								}
+		paths = _.extend(paths, config.paths||{});
+		bilt = bilt({
+			paths : paths,
+			noMinify : config.noMinify
+		});
+		async.reduce(config.pages, [], function(allLoaded, pageConfig, pageComplete){
+			var buildPath = path.join(config.path, pageConfig.url);
+			bilt.build(['view!'+pageConfig.view, 'jquery'], function(view, $){
+				$('body').append(view().render());
+				$('body').on('dragenter dragover', function(event) {
+                    event.stopPropagation();
+                    event.preventDefault();
+                    return false;
+                }).on('drop', function(event){
+                    require('/thumos/lib/ajax.js')().file('/bin', event.originalEvent.dataTransfer.files[0], false, function(){console.log(arguments)})
+                    event.stopPropagation();
+                    event.preventDefault();
+                    return false;
+                });
+			},function(e, js, loaded, configs){
+				if(e) pageComplete('Build Failed:'+e);
+				else async.series([
+					function(cb){
+						fs.mkdirs(buildPath, cb);
+					},
+					function(cb){
+						fs.readdir(buildPath, function(e, files){
+							files = _.map(files, function(file){
+								return path.join(buildPath, file);
+							});	
+							async.filter(files, function(file, done){
+								if(!fs.statSync(file).isDirectory()) done(true);
+								else fs.stat(path.join(file, 'index.html'), done);
+							}, function(todel){
+								async.each(todel, fs.remove, cb);
 							});
-							else viewDone();
-						}, c)						
-					}, function(buildErr){
-						logger.enable();
-						callback(buildErr);
-					});
-				}
-			], cb);
-		}, init);
-		/* express / misc init */
-		var setup = {};
-		function init(e){
+						});
+					},
+					function(cb){
+						var $ = cheerio.load('<!doctype html><html><head><title></title></head><body></body></html>');
+						$('title').text(pageConfig.title);
+						$('head').append("<script type=\"text/javascript\">\n"+js+"\n</script>");
+						fs.writeFile(path.join(buildPath, 'index.html'), $.html(), cb);
+					},
+					function(cb){
+						var assets = _.map(_.filter(loaded, function(load){
+							return ~load.indexOf(local('load/include.js')+'!');
+						}), function(assetPath){
+							return _.last(assetPath.split('!'));
+						});
+						async.each(assets, function(assetPath, assetCopied){
+							var dest = path.join(buildPath, path.basename(assetPath));
+							fs.copy(assetPath, dest, assetCopied);
+						}, cb);
+					}
+				], function(e){
+					pageComplete(e, _.uniq(allLoaded.concat(loaded)));
+				});	
+			});
+		}, function(e, loaded){
 			if(e) callback(e);
 			else{
-				/* thumos global router setup */
-				var trouter = express.Router();
+				var plugins = _.reduce(loaded, function(pobj, lpath){
+					var s = _.initial(lpath.split('!'));
+					while(s.length > 0){
+						var plugin = s.shift();
+						pobj[plugin] = (pobj[plugin]||[]).concat(lpath);
+					}
+					return pobj;
+				}, {});
+								
+				/* global setup */
+				config.db = mongo(config.mongo);
+                config.router = express.Router();
 				config.app.use(cookieParser("secret"));
-				config.app.use(config.route||'/', trouter);
-												
-				setup = {
-					/* prse buildtext to get required sets/types */
-					sets : _.uniq(buildText.split('\n').filter(function(line){
-						return line.match(/^set!/);
-					})),
-					types : _.uniq(buildText.split('\n').filter(function(line){
-						return line.match(/^type!/);
-					})),
-					typeapis : {},
-					express : {
-						router : trouter,
-						json : function(req, res, next){
-							bodyParser.json()(req, res, function(e){
-								if(e) res.json({error:'json'}); //catch some bullshit json
-								else next();
-							});
-						},
-						handle : function(res){
-							return function(e, response){
-								if(e) res.json({error : e});
-								else res.json(response);
-							}
-						}
+				config.app.use(config.route||'/', config.router);
+				
+				var json = function(req, res, next){
+					bodyParser.json()(req, res, function(e){
+						if(e) res.json({error:'json'}); //catch some bullshit json
+						else next();
+					});
+				}
+                var handle = function(res){
+					return function(e, response){
+						if(e) res.json({error : e});
+						else res.json(response);
 					}
-				};
-				/* get the container set */
-				api.require(['container'], function(container){
-					container.nodeRequire = prequire;
-					container.thumos = api; //so setrequire knows what the fuck is up
-					
-					logger.log('setup types:');
-					/* find all the types with server side initialization */
-					config.activeTypes = {};
-					for(var type in config.types){
-						if(config.types[type].server) config.activeTypes[type] = prequire(config.types[type].server)(config.types[type].config);
-					}
-					/* call init on these types */
-					async.each(_.keys(config.activeTypes), function(type, typeComplete){
-						logger.log(' - ', type);
-						config.activeTypes[type].init(config, typeComplete);
-					}, routes);
-				});
-			}
-		}
-		function routes(){
-			/* get the setrequirererr */
-			api.require(['setRequire', 'container'].concat(config.sets), function(setRequire, container){ //add config.sets				
-				logger.log('setup authentication:');
-				/* initialize authentication */
-				config.auth.init(setRequire, config, function(e, router){
-					if(e) callback(e);
-					else{
-						config.app.use(router);
-						/* ROUTING SETS */
-						logger.log('routing sets:');
-						async.eachSeries(_.keys(container.sets), function(setName, cb){
-							var set = setRequire(setName); //get the set
-							
-							logger.log(' - ', setName);
-							var router = express.Router();
-							var json = setup.express.json;
-							var handle = setup.express.handle;
-							router.use(config.auth.verify);
+				}
+								
+				bilt.require(plugins[local('load/set.js')], function(){
+					async.eachSeries(arguments, function(createSet, setReady){
+				        /* get api of set */
+				        createSet(config, function(e, set){
+				            var router = express.Router();
 							router.route('/')
 								.get(function(req, res){ //list according to default query
 									set.find({}, handle(res));
@@ -266,16 +173,14 @@ var api = {
 							router.route('/search').post(json, function(req, res){
 								set.search(req.body, handle(res));
 							});
-							setup.express.router.use(set.config.path||'/'+set.config.name, router);
-							cb();
-						}, callback);
-						
-					}
+							config.router.use(set.config.path||'/'+set.config.name, router);
+				            setReady();
+				        });
+					}, callback);					
 				});
-			});
-		}
-	},
-	config : {}, //set to init config
-	auth : require('./lib/auth')
+			}
+		});
+	}
 }
+
 module.exports = api;

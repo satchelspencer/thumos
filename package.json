@@ -23,6 +23,9 @@
     "module-lookup-amd": "~2.0.4",
     "requirejs": "~2.1.20",
     "aws-sdk": "~2.1.45",
-    "skipper": "~0.5.5"
+    "skipper": "~0.5.5",
+    "underscore": "~1.8.3",
+    "datauri": "~0.7.1",
+    "html-minifier": "~0.8.0"
   }
 }
