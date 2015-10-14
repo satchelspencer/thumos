@@ -8,10 +8,6 @@ define({
             var $ = require('jquery');
             var _ = require('underscore');
 			
-			$.fn.view = function(){
-                console.log(view);
-			}
-			
 			var events = {};
 			var api = {
 				dom : {},
@@ -20,7 +16,7 @@ define({
 				},
 				render : function(options, className){
 				    if(_.isFunction(config.html)) config.html = config.html();
-					var dom = $(config.html); //build our jquery
+					var dom = $(config.html).clone(); //build our jquery
 					this.dom = dom;
 					/* now initalize our view since its children are done */
 					if(config.init) config.init.call(this, options);
@@ -28,7 +24,6 @@ define({
 					if(className) this.addClass(className);
 					return dom;
 				},
-				fn : {},
 				/* event registering on views */
 				on : function(event, callback){
 					events[event] = callback;
