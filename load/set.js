@@ -26,7 +26,7 @@ define({
 		}
 		
 		var typedProps = {}; //contains all properties in model that require encode/decode
-		_.each(config.model.properties, function(value, prop){
+		_.each(config.properties, function(value, prop){
 			if(value.type) typedProps[prop] = value;
 		});
 		/* get, del, add and queryies all just go to server */

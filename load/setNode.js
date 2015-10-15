@@ -14,9 +14,11 @@ define({
         var validator = require('validator');
 		var async = require('async');
         
+        config.queries = config.queries||{};
+        
         return function(thumosConfig, callback){
             /* for all types that have uninitialized server handlers, doit */           
-            async.eachSeries(_.values(config.model.properties), function(prop, propDone){
+            async.eachSeries(_.values(config.properties), function(prop, propDone){
                 if(prop.type && _.isFunction(prop.type.server)) prop.type.server(thumosConfig, function(e, propApi){
                     prop.type.server = propApi;
                     propDone(e);
@@ -25,7 +27,7 @@ define({
             }, function(e){
                 if(e) callback(e);
                 else{
-                    var activeProps = _.pick(config.model.properties, function(prop){
+                    var activeProps = _.pick(config.properties, function(prop){
                         return prop.type && prop.type.server;
                     });
                     
@@ -95,8 +97,7 @@ define({
     						if(ids.constructor !== Array) ids = [ids]; //force to array
     						async.reject(ids, function(id, cb){
     							collection.findOne({_id : thumosConfig.db.id(id)}, function(e, model){
-    								if(e) cb(e);
-    								else if(!model) cb('not found');
+    								if(e || !model) cb();
     								else{
     									var toPurge = _.pick(model, _.keys(activeProps));
     									/* for every property in the model to die */
@@ -104,7 +105,7 @@ define({
     										var purge = activeProps[prop].type.server.purge;
     				                        purge(toPurge[prop], purged); //kill it
     									}, function(e){
-    										if(e) cb(e);
+    										if(e) cb();
     										else collection.remove({_id : thumosConfig.db.id(id)}, function(e, res){
     											cb(res.n); //add to the failed if res.n == 0 and was not removed
     										});
