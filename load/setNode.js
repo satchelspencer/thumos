@@ -30,7 +30,6 @@ define({
                     var activeProps = _.pick(config.properties, function(prop){
                         return prop.type && prop.type.server;
                     });
-                    
                     var collection = thumosConfig.db.collection(config.collection||config.name);
                     
                     var api = {

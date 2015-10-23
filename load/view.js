@@ -7,7 +7,7 @@ define({
 		return function(){
             var $ = require('jquery');
             var _ = require('underscore');
-			
+						
 			var events = {};
 			var api = {
 				dom : {},
@@ -15,14 +15,13 @@ define({
 					return this.dom.find(selecta);
 				},
 				render : function(options, className){
-				    if(_.isFunction(config.html)) config.html = config.html();
-					var dom = $(config.html).clone(); //build our jquery
-					this.dom = dom;
+					var dom = _.isString(config.html)?$(config.html):config.html(); //build our jquery clone w/data and events!!!
+					api.dom = dom.clone(true);
 					/* now initalize our view since its children are done */
-					if(config.init) config.init.call(this, options);
-					dom.data('view', _.omit(this, 'dom', 'render'));
-					if(className) this.addClass(className);
-					return dom;
+					api.dom.data('view', api);
+					if(className) api.dom.addClass(className);
+					if(config.init) config.init.call(api, options);
+					return api.dom;
 				},
 				/* event registering on views */
 				on : function(event, callback){

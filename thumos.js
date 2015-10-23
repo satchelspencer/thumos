@@ -34,9 +34,15 @@ var api = {
 				source : 'https://code.jquery.com/jquery-1.11.3.min.js',
 				export : '$'
 			},
+			'jqext' : {
+                source : local('lib/jqext.js'),
+                export : '$.fn.view',
+                deps : ['jquery']
+			},   
 			'underscore' : {
-				source : 'https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js',
-				export : '_'
+				source : local('bower_components/underscore/underscore-min.js'),
+				export : '_',
+				minify : true
 			},
 			'async' : {
 				source : local('bower_components/async/dist/async.min.js'),
@@ -56,7 +62,7 @@ var api = {
 		});
 		async.reduce(config.pages, [], function(allLoaded, pageConfig, pageComplete){
 			var buildPath = path.join(config.path, pageConfig.url);
-			bilt.build(['view!'+pageConfig.view, 'jquery'], function(view, $){
+			bilt.build(['view!'+pageConfig.view, 'jquery', 'jqext'], function(view, $){
 				$('body').append(view().render());
 				$('body').on('dragenter dragover', function(event) {
                     event.stopPropagation();

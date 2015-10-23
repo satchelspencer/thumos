@@ -86,42 +86,52 @@ define({
 			/* event handling logic */
 			events : {},
 			on : function(events, inp, callback){
-				var inp = parse(inp);
-				if(inp.error) return false;
-				else{
-					events.split(' ').forEach(function(event){
-						inp.ids.forEach(function(id){
-							api.util.ebase(id, event).push(callback);
-						});
-					});
-					return true;
+				if(callback){
+				    inp = parse(inp);
+				    if(inp.error) return false;
+				}else{
+				    callback = inp;
+				    inp = {ids:['*']};
 				}
+				events.split(' ').forEach(function(event){
+					inp.ids.forEach(function(id){
+						api.util.ebase(id, event).push(callback);
+					});
+				});
+				return true;
 			},
 			off : function(events, inp){
-				var inp = parse(inp);
-				if(inp.error) return false;
-				else{
-					events.split(' ').forEach(function(event){
-						inp.ids.forEach(function(id){
-							if(api.events[id][event]) delete api.events[id][event];
-						});
-					});
-					return true;
+				if(inp){
+				    inp = parse(inp);
+				    if(inp.error) return false;
+				}else{
+				    inp = {ids:['*']};
+				    callback = inp;
 				}
+				events.split(' ').forEach(function(event){
+					inp.ids.forEach(function(id){
+						if(api.events[id][event]) delete api.events[id][event];
+					});
+				});
+				return true;
 			},
 			trigger : function(events, inp){
-				var inp = parse(inp);
-				if(inp.error) return false;
-				else{
-					events.split(' ').forEach(function(event){
-						inp.ids.forEach(function(id){
-							api.util.ebase(id, event).forEach(function(callback){
-								callback(_.findWhere(inp.models, {_id : id}));
-							});
+				if(inp){
+				    inp = parse(inp);
+				    if(inp.error) return false;
+				    else api.trigger(events); //trigger global
+				}else{
+				    inp = {ids:['*']};
+				    callback = inp;
+				}
+				events.split(' ').forEach(function(event){
+					inp.ids.forEach(function(id){
+						api.util.ebase(id, event).forEach(function(callback){
+							callback(_.findWhere(inp.models, {_id : id}));
 						});
 					});
-					return true;
-				}
+				});
+				return true;
 			},
 			fn : {},
 			config : config,

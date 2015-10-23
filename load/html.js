@@ -1,8 +1,8 @@
-define({
+ define({
     transform : function(text, path, callback){
         var htmlMinify = nodeRequire('html-minifier');
         var crypto = nodeRequire('crypto');
-        var unserscore = require('underscore');
+        var _ = require('underscore');
         
         var html = htmlMinify.minify(text, {
 		  collapseWhitespace : true,
@@ -29,7 +29,7 @@ define({
             var templates = ['+_.map(templates, function(template, i){
                 return '[require("'+template+'"),"'+ids[i].id+'","'+ids[i].class+'"],';
             })+'];\
-            _.each(templates, function(template){dom.find("#"+template[1]).replaceWith(template[0]().render().addClass(template[2]))});\
+            _.each(templates, function(template){var n = template[0](); dom.find("#"+template[1]).before(n.render(null, template[2]))});\
             return dom;\
         })');
 	}
