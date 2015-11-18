@@ -1,5 +1,5 @@
 var async = require('async');
-var bilt = require('bilt');
+var bilt = require('bilt')(); //make a new instance
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
 var cheerio = require('cheerio');
@@ -30,14 +30,16 @@ var api = {
 			'include' : local('load/include.js'),
 			'ajax' : local('lib/ajax.js'),
 			'validator' : local('lib/validator.js'),
+			'config' : local('lib/config.js'),
 			'jquery' : {
-				source : 'https://code.jquery.com/jquery-1.11.3.min.js',
-				export : '$'
+				source : local('bower_components/jQuery/dist/jquery.min.js'),
+				export : '$',
+				minify : true
 			},
 			'jqext' : {
-                source : local('lib/jqext.js'),
-                export : '$.fn.view',
-                deps : ['jquery']
+				source : local('lib/jqext.js'),
+				export : '$.fn.view',
+				deps : ['jquery']
 			},   
 			'underscore' : {
 				source : local('bower_components/underscore/underscore-min.js'),
@@ -50,31 +52,24 @@ var api = {
 				minify : true
 			},
 			'crc32' : {
-				source : 'crc-32',
+				source : 'crc-32', //node path
 				export : 'CRC32',
 				minify : true
 			}
 		};
 		paths = _.extend(paths, config.paths||{});
-		bilt = bilt({
-			paths : paths,
-			noMinify : config.noMinify
-		});
+
 		async.reduce(config.pages, [], function(allLoaded, pageConfig, pageComplete){
 			var buildPath = path.join(config.path, pageConfig.url);
-			bilt.build(['view!'+pageConfig.view, 'jquery', 'jqext'], function(view, $){
-				$('body').append(view().render());
-				$('body').on('dragenter dragover', function(event) {
-                    event.stopPropagation();
-                    event.preventDefault();
-                    return false;
-                }).on('drop', function(event){
-                    require('/thumos/lib/ajax.js')().file('/bin', event.originalEvent.dataTransfer.files[0], false, function(){console.log(arguments)})
-                    event.stopPropagation();
-                    event.preventDefault();
-                    return false;
-                });
-			},function(e, js, loaded, configs){
+			bilt.build({
+				paths : paths,
+				deps : ['view!'+pageConfig.view, 'jquery', 'jqext'],
+				verbose : true
+			}, function(view, $){
+				$(window).ready(function(){
+					$('body').append(view().render());
+				})
+			},function(e, loaded, js){
 				if(e) pageComplete('Build Failed:'+e);
 				else async.series([
 					function(cb){
@@ -100,6 +95,7 @@ var api = {
 						fs.writeFile(path.join(buildPath, 'index.html'), $.html(), cb);
 					},
 					function(cb){
+						/* pick up the assets plugin files */
 						var assets = _.map(_.filter(loaded, function(load){
 							return ~load.indexOf(local('load/include.js')+'!');
 						}), function(assetPath){
@@ -126,9 +122,9 @@ var api = {
 					return pobj;
 				}, {});
 								
-				/* global setup */
+				/* global mongo/express setup */
 				config.db = mongo(config.mongo);
-                config.router = express.Router();
+				config.router = express.Router();
 				config.app.use(cookieParser("secret"));
 				config.app.use(config.route||'/', config.router);
 				
@@ -138,18 +134,32 @@ var api = {
 						else next();
 					});
 				}
-                var handle = function(res){
+				var handle = function(res){
 					return function(e, response){
 						if(e) res.json({error : e});
 						else res.json(response);
 					}
 				}
-								
-				bilt.require(plugins[local('load/set.js')], function(){
-					async.eachSeries(arguments, function(createSet, setReady){
-				        /* get api of set */
-				        createSet(config, function(e, set){
-				            var router = express.Router();
+				/* insert thumos config as a requireble module */
+				bilt.require({
+					paths : paths,
+					deps : ['config']
+				}, function(e, loaded){
+					_.extend(_.values(loaded)[0], config); //add
+					bilt.require({
+						paths : paths,
+						deps : _.map(plugins[local('load/set.js')], function(path){
+							var split = path.split('!');
+							return _.map(split, function(part){
+								if(part == local('load/set.js')) part = 'set';
+								return part;
+							}).join('!');
+						}),
+						verbose : true
+					}, function(e, loaded){
+						if(e) callback(e);
+						else async.eachSeries(_.values(loaded), function(set, setReady){
+							var router = express.Router();
 							router.route('/')
 								.get(function(req, res){ //list according to default query
 									set.find({}, handle(res));
@@ -180,10 +190,10 @@ var api = {
 								set.search(req.body, handle(res));
 							});
 							config.router.use(set.config.path||'/'+set.config.name, router);
-				            setReady();
-				        });
-					}, callback);					
-				});
+							setReady();
+						}, callback);					
+					});
+				})
 			}
 		});
 	}

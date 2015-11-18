@@ -4,8 +4,15 @@ define({
 			if(e) callback(e);
 			else nodeRequire('postcss')([nodeRequire('autoprefixer-core')]).process(css).then(function(res){
 				var css = nodeRequire('sqwish').minify(res.css);
-				callback(null, 'define((function(){var tag = document.createElement(\'style\');tag.type = \'text/css\';tag.innerHTML = '+JSON.stringify(css)+';document.getElementsByTagName(\'head\')[0].appendChild(tag);})())');
+				callback(null, 'define('+JSON.stringify(css)+')');
 			});
 		});
+	},
+	init : function(csstext){
+		/* append tag with css */
+		var tag = document.createElement('style');
+		tag.type = 'text/css';
+		tag.innerHTML = csstext;
+		document.getElementsByTagName('head')[0].appendChild(tag);
 	}
 });

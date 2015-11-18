@@ -24,7 +24,6 @@ define({
 		function checksum(model){
 			return crc32.str(JSON.stringify(model));
 		}
-		
 		var typedProps = {}; //contains all properties in model that require encode/decode
 		_.each(config.properties, function(value, prop){
 			if(value.type) typedProps[prop] = value;
@@ -53,7 +52,7 @@ define({
 				var inp = parse(inp);
 				if(inp.error) callback(inp.error);
 				else ajax.req('delete', api.config.path+'/i/'+inp.ids.join(','), function(e, removedIds){
-					if(!e) api.trigger('del', removedIds);
+					if(!e) api.trigger('del change', removedIds);
 					callback(e, removedIds);
 				});
 			},
@@ -61,7 +60,7 @@ define({
 				api.valid(models, function(e, toAdd){
 					if(e) callback(e);
 					else ajax.req('post', api.config.path, toAdd, api.util.postprocess(function(e, newModels){ //decode that
-						if(!e) api.trigger('add', newModels); //change is already triggered by default
+						if(!e) api.trigger('add change', newModels); //change is already triggered by default
 						callback(e, newModels);
 					}));
 				});

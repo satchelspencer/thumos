@@ -1,5 +1,5 @@
 define({
-    normalize : function(path){
+    normalize : function(path){ /* not used, for now */
         var p = nodeRequire('path');
         return path.match("\.js$")?path:p.join(path, p.basename(path)+'.js');
     },
