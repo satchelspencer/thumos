@@ -67,7 +67,7 @@ var api = {
 				verbose : true
 			}, function(view, $){
 				$(window).ready(function(){
-					$('body').append(view().render());
+					$('body').append(view());
 				})
 			},function(e, loaded, js){
 				if(e) pageComplete('Build Failed:'+e);

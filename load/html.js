@@ -29,7 +29,7 @@
             var templates = ['+_.map(templates, function(template, i){
                 return '[require("'+template+'"),"'+ids[i].id+'","'+ids[i].class+'"],';
             })+'];\
-            _.each(templates, function(template){var n = template[0](); dom.find("#"+template[1]).before(n.render(null, template[2]))});\
+            _.each(templates, function(template){var n = template[0]; dom.find("#"+template[1]).before(n(null, template[2]))});\
             return dom;\
         })');
 	}
