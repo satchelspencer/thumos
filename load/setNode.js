@@ -17,22 +17,39 @@ define({
 		config.queries = config.queries || {};
 		/* createset() */
 		/* for all types that have uninitialized server handlers, doit */
-		async.eachSeries(_.values(config.properties), function(prop, propDone) {
-			if (prop.type && _.isFunction(prop.type.server)) prop.type.server(thumosConfig, function(e, propApi) {
-				prop.type.server = propApi;
-				propDone(e);
-			});
+		var typedProps = {};
+		async.eachSeries(_.keys(config.properties), function(propName, propDone) {
+			var prop = config.properties[propName];
+			/* if we have a custom type prop */
+			if(prop.type){
+				/* call prop init, only once */
+				if(!prop.type.complete && prop.type.init){
+					prop.type.complete = true; //mark as initialized
+					prop.type.props = prop.type.props||{};
+					prop.type.init(thumosConfig, prop.type.props, typeDone);
+				}else typeDone();
+				/* type has been initialized */
+				function typeDone(e){
+					prop.type.complete = true;
+					var ident = config.name+'-'+propName;
+					if(prop.type.api && !e){
+						/* get api given context of current property */
+						prop.type.api(ident, prop, function(e, api){
+							typedProps[propName] = api; //save it in typedProps by `NAME`
+							prop.type.props[ident] = prop;
+							propDone(e);
+						});
+					}else propDone(e);
+				}
+			}
 			else propDone();
-		}, function(e) {
+		}, function(e){
 			if (e) callback(e);
-			else {
-				var activeProps = _.pick(config.properties, function(prop) {
-					return prop.type && prop.type.server;
-				});
+			else{
 				var collection = thumosConfig.db.collection(config.collection || config.name);
 
 				var api = {
-					valid: validator(config), //setup the validator given our config
+					valid: validator(config, typedProps), //setup the validator given our config
 					get: function(ids, callback) {
 						/* get all ids */
 						var invalid = _.reject(ids, thumosConfig.db.id);
@@ -72,7 +89,8 @@ define({
 								}); //gotta have an id to update
 								else {
 									model._id = thumosConfig.db.id(model._id); //mongoize it
-									var toPurge = _.pick(model, _.keys(activeProps));
+									var toPurge = _.pick(model, _.keys(typedProps)); //only purge if its typed
+									/* mongodb field selction object, only to include props that must be destroyed */
 									var selObj = _.mapObject(toPurge, function(val) {
 										return 1;
 									});
@@ -86,10 +104,10 @@ define({
 										});
 										else {
 											/* purge any typed Properties */
-											toPurge = _.pick(oldModel, _.keys(activeProps));
+											toPurge = _.pick(oldModel, _.keys(typedProps));
 											async.each(_.keys(toPurge), function(prop, purged) {
-												var purge = activeProps[prop].type.server.purge;
-												purge(toPurge[prop], purged); //kill it
+												var purge = typedProps[prop].purge;
+												purge(toPurge[prop], purged); //kill it 
 											}, function(e) {
 												/* now update the model */
 												if (e) cb(e);
@@ -120,11 +138,11 @@ define({
 							}, function(e, model) {
 								if (e || !model) cb();
 								else {
-									var toPurge = _.pick(model, _.keys(activeProps));
+									var toPurge = _.pick(model, _.keys(typedProps));
 									/* for every property in the model to die */
 									async.each(_.keys(toPurge), function(prop, purged) {
-										var purge = activeProps[prop].type.server.purge;
-										purge(toPurge[prop], purged); //kill it
+										var purge = typedProps[prop].purge;
+										purge(toPurge[prop], purged); //kill it 
 									}, function(e) {
 										if (e) cb();
 										else collection.remove({
