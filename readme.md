@@ -61,14 +61,18 @@ sets are a queryable, updateable collection of multiple models. they sync with t
  - `functions` object of custom functions that act on multiple models in a set
 
 ## custom property types
-property types are npm modules that likely will do a mix of client and server tasks. as a result they must be npm modules installed in your main project. they can can have commonjs dependencies, but must be written in amd format returning an object of the following format see [thumos-file](https://github.com/satchelspencer/thumos-file) for an example: 
- - `encode : function(inp, callback)` takes input, which may contain raw or decoded if data. validate and return encoded format
- - `decode : function(inp, callback)` function to take stored data and return whatever you need
- - `server : function(config, callback)` takes in main thumos config for setup, and callback function to be called with:
-   - `finalize : function(value, callback)` given value calls back with final value to be stored
-   - `purge : function(value, callback)` 'destructor' for the type, removes a value
-
-if you don't need a server side setup you can omit the init function and require like any other module, or inline it. **idgaf**
+property types are passed to thumos as an object with the following properties:
+ - `init : function(thumosConfig, props, callback)` called once for this type
+   - `thumosConfig` thumos' [config object](#configuration)
+   - `props` object with keys as identifiers of initlized properties, values are the configs for each instance
+ - `api : function(identifier, propConfig, callback)` setup for each property
+   - `identifier` unique string value representing which property is being initiaized
+   - `propConfig` config options passed in with property
+   - `callback(e, api)` when finished call back with api containing any of the following:
+     - `encode : function(value, callback)` modify value when saving object
+     - `decode : function(value, callback)` modify value retrieving object
+     - `finalize : function(value, callback)` **server** modify on succesful server side save
+     - `purge : function(value, callback)` **server** called on object deletion
  
 ## property validators
 a function with arguments `input` and `callback` takes input does some operation and calls back with error as first parameter and new value as second. example:
