@@ -30,10 +30,10 @@ define({
 			var prop = config.properties[propName];
 			/* if we have a custom type prop */
 			if(prop.type){
+				prop.type.props = prop.type.props||{};
 				/* call prop init, only once */
 				if(!prop.type.complete && prop.type.init){
 					prop.type.complete = true; //mark as initialized
-					prop.type.props = prop.type.props||{};
 					prop.type.init(config, prop.type.props, typeDone);
 				}else typeDone();
 				/* type has been initialized */
