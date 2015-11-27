@@ -56,6 +56,7 @@ sets are a queryable, updateable collection of multiple models. they sync with t
    - `valid` : [validator function](#property-validators) that calls back with validity of property
    - `type` : [property type](#custom-property-types)
    - `listed` : bool if model should be included in list
+   - `onchange : function(model, callback)` called on change of value for model callback optionally with new value for *entire* model or error
  - `access` [access module](#access-module) default access controls for entire set
  - `queries` object of set [queries](#queries)
  - `functions` object of custom functions that act on multiple models in a set
