@@ -57,6 +57,7 @@ sets are a queryable, updateable collection of multiple models. they sync with t
    - `type` : [property type](#custom-property-types)
    - `listed` : bool if model should be included in list
    - `onchange : function(model, callback)` called on change of value for model callback optionally with new value for *entire* model or error
+   - `compute : function(model, callback)` called on model change, callback sets the value of the property based on the whole model
  - `access` [access module](#access-module) default access controls for entire set
  - `queries` object of set [queries](#queries)
  - `functions` object of custom functions that act on multiple models in a set
