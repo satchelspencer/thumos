@@ -75,7 +75,7 @@ define({
 					},
 					getOne: function(id, callback) {
 						api.get([id], function(e, models) {
-							callback(e, models[0]);
+							callback(e, e||models[0]);
 						});
 					},
 					update: function(data, callback) {

@@ -39,12 +39,12 @@ view objects have the following properties:
 example definition:
 ~~~ javascript
 define([
-	'css!./index.css', //css dep
+  'css!./index.css', //css dep
 ], {
-	html : require('html!./index.html'),
-	init : function(options){
-		// setup your view
-	}
+  html : require('html!./index.html'),
+  init : function(options){
+    // setup your view
+  }
 })
 ~~~
 
@@ -80,8 +80,8 @@ property types are passed to thumos as an object with the following properties:
 a function with arguments `input` and `callback` takes input does some operation and calls back with error as first parameter and new value as second. example:
 ~~~javascript
 function(name, callback){
-	if(!name.match(/(.*){5,}/)) callback('name must be at least 5 chars long');
-	else callback(null, name.toLowerCase());
+  if(!name.match(/(.*){5,}/)) callback('name must be at least 5 chars long');
+  else callback(null, name.toLowerCase());
 }
 ~~~
 
@@ -94,7 +94,7 @@ access modules are an object with four properties `read` `write` `add` `delete` 
 queries are defined by function that takes an object of parameters and returns a mongodb query object example:
 ~~~ javascript
 minAge : function(age){
-	return {age : {$gt : age}}
+  return {age : {$gt : age}}
 }
 ~~~
 
@@ -134,6 +134,13 @@ thumos by default sets up an email/password based authentication mechanism. cook
 - `set.on(event, which, callback)` binds `callback` to `which` (array of models or ids) when [`event`](#events) is triggered
 - `set.off(event, which)` turns off [`event`](#events) on models
 - `set.trigger(event, which)` trigger [`event`](#events) on models
+- `set.group(object)` keep track of all elements that pass the test, returns group object:
+  - `test : function(inp)` return true if model falls into group
+  - `onadd` called on new models added
+  - `ondel` called on models removed
+  - `onchange` called on updated module
+  - `watch` called on any change, passes all models
+  - `off` call to destroy object
 
 ## resultset api
 currently it is just an array of models
@@ -160,8 +167,8 @@ todo
      - [less](http://lesscss.org/) less parser
    - [deasync](https://github.com/abbr/deasync) bodge-enabler for doing crazy requirejs shit
  - [jquery](https://jquery.com/) client side dom management
- - [async] (https://github.com/caolan/async) async control flow
- - [postcss](https://github.com/postcss/postcss) css processor	
+ - [async](https://github.com/caolan/async) async control flow
+ - [postcss](https://github.com/postcss/postcss) css processor  
  - [autoprefixer](https://github.com/postcss/autoprefixer) handles browser prefixes at build time
  - [rimraf](https://github.com/isaacs/rimraf) rm -rf
  - [cheerio](https://github.com/cheeriojs/cheerio) server side dom management
