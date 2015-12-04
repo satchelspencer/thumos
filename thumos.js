@@ -27,7 +27,7 @@ var api = {
 				source : local('load/set.js'),
 				nodePath : local('load/setNode.js')
 			},
-			'include' : local('load/include.js'),
+			'file' : local('load/file.js'),
 			'ajax' : local('lib/ajax.js'),
 			'validator' : local('lib/validator.js'),
 			'config' : local('lib/config.js'),
@@ -97,7 +97,7 @@ var api = {
 					function(cb){
 						/* pick up the assets plugin files */
 						var assets = _.map(_.filter(loaded, function(load){
-							return ~load.indexOf(local('load/include.js')+'!');
+							return ~load.indexOf(local('load/file.js')+'!');
 						}), function(assetPath){
 							return _.last(assetPath.split('!'));
 						});

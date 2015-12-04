@@ -78,22 +78,16 @@ define({
 						var inp = parse(inp);
 						if(inp.error) callback(inp.error);
 						else ajax.req('delete', api.config.path+'/i/'+inp.ids.join(','), function(e, deleted){
-							var groups = {};
-							_.each(deleted, function(id){
-								_.each(api.groups, function(group, groupid){
-									if(group.models[id]){
-										groups[groupid] = groups[groupid]||[];
-										groups[groupid].push(id);
+							_.each(deleted, function(modelId){
+								if(api.watchers[modelId]) api.watchers[modelId].util.trigger('del');
+								_.each(api.groups, function(group){
+									if(group.util.models[modelId]){
+										delete group.util.models[modelId];
+										group.util.trigger('del', modelId);
 									}
-									delete api.models[id];
-									delete group.models[id];
-								})
+								});
 							});
-							_.each(groups, function(removed, id){
-								var g = api.groups[id];
-								if(g.ondel) g.ondel(removed);
-								if(g.watch) g.watch(_.values(g.models));
-							});
+							callback(e, deleted);
 						});
 					},
 					add : function(models, callback){
@@ -119,23 +113,94 @@ define({
 							else api.decode(models, api.util.postprocess(callback));
 						});
 					},
-					group : function(options){
-						var id = Math.round(Math.random()*Math.pow(2, 32)).toString(16);
+					group : function(test){
+						var events = {};
 						var group = {
-							models : {},
-							off : function(){
-								delete api.groups[id];
+							on : function(event, callback){
+								events[event] = callback;
+								return group;
+							},
+							test : function(test){
+								test = test||function(){return true;};
+								group.util.test = test;
+								_.each(api.models, function(model){
+									group.util.catch(model);
+								})
+								return group;
+							},
+							util : {
+								catch : function(model){
+									if(!group.util.test) return false;
+									var valid = group.util.test(model);
+									var ingroup = group.util.models[model._id];
+									if(valid){
+										if(ingroup) group.util.trigger('update', model);
+										else{ //not currently in group, but should be
+											group.util.models[model._id] = model;
+											group.util.trigger('add', model);
+										}
+									}else if(ingroup){
+										delete group.util.models[model._id];
+										group.util.trigger('del', model._id); //trigger w/id
+									}
+								},
+								trigger : function(event, value){
+									if(events[event]) events[event](value);
+								},
+								models : {}
 							}
 						}
-						_.extend(group, options);
-						_.each(api.models, function(model, id){
-							if(group.test(model)) group.models[id] = model;
-						})
-						api.groups[id] = group;
+						group.test(test);
+						api.groups.push(group);
 						return group;
 					},
-					groups : {},
+					watch : function(model){
+						var events = {};
+						var props = {};
+						var watcher = {
+							on : function(event, callback){
+								events[event] = callback;
+								return watcher;
+							},
+							prop : function(propName, callback){
+								props[propName] = callback;
+								if(watcher.util.modelId) callback(api.models[watcher.util.modelId][propName]);
+								return watcher;
+							},
+							watch : function(model){
+								var newId = model._id||model;
+								if(watcher.util.modelId){
+									var old = api.watchers[watcher.util.modelId];
+									old.splice(old.indexOf(watcher), 1);
+								}
+								watcher.util.modelId = newId;
+								api.watchers[newId] = api.watchers[newId]||[];
+								api.watchers[newId].push(watcher);
+								_.each(api.models[newId], function(val, prop){
+									if(props[prop]) props[prop](val);
+								});	
+								return watcher;
+							},
+							util : {
+								catch : function(model){
+									var oldModel = api.models[model._id];
+									_.each(oldModel, function(oldVal, prop){
+										if(JSON.stringify(oldVal) != JSON.stringify(model[prop])){
+											if(props[prop]) props[prop](model[prop]);
+										}
+									});
+								},	
+								trigger : function(event, value){
+									if(events[event]) events[event](value);
+								}
+							}
+						}
+						if(model) watcher.watch(model);
+						return watcher;
+					},
 					models : {},
+					watchers : {},
+					groups : [],
 					fn : {},
 					config : config,
 					util : {
@@ -176,35 +241,15 @@ define({
 									if(e) callback(e);
 									else{
 										var diff = api.util.getChanged(decoded); //incudes new
-										var added = {};
-										var changed = {};
-										var groups = {};
-										/* set added an changed to be objects with key: group id, value: array of models */
 										_.each(diff, function(model){
-											_.each(api.groups, function(group, id){
-												if(group.test(model)){
-													groups[id] = groups[id]||{
-														added : [],
-														changed : []
-													};
-													if(api.models[model['_id']]) groups[id].changed.push(model);
-													else groups[id].added.push(model);
-												}
+											if(api.watchers[model._id]) _.each(api.watchers[model._id], function(watcher){
+												watcher.util.trigger('update', models);
+												watcher.util.catch(model);
 											});
-										});
-										/* for each added and changed group, trigger the events accorgingly */
-										_.each(groups, function(group, id){
-											var g = api.groups[id];
-											if(group.added.length && g.onadd) g.onadd(group.added);
-											if(group.changed.length && g.onchange) g.onchange(group.changed);
-											if(group.added.length || group.changed.length){
-												var newModels = _.mapObject(_.groupBy(_.uniq(group.added.concat(group.changed)), '_id'), function(v){
-													return v[0];
-												})
-												_.extend(g.models, newModels);
-												_.extend(api.models, newModels);
-												if(g.watch) g.watch(_.values(g.models));
-											}
+											api.models[model._id] = model;
+											_.each(api.groups, function(group){
+												group.util.catch(model);
+											});
 										});
 										callback(e, decoded);
 									}
