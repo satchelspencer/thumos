@@ -134,25 +134,27 @@ thumos by default sets up an email/password based authentication mechanism. cook
 - `set.on(event, which, callback)` binds `callback` to `which` (array of models or ids) when [`event`](#events) is triggered
 - `set.off(event, which)` turns off [`event`](#events) on models
 - `set.trigger(event, which)` trigger [`event`](#events) on models
-- `set.group(object)` keep track of all elements that pass the test, returns group object:
-  - `test : function(inp)` return true if model falls into group
-  - `onadd` called on new models added
-  - `ondel` called on models removed
-  - `onchange` called on updated module
-  - `watch` called on any change, passes all models
-  - `off` call to destroy object
-
-## resultset api
-currently it is just an array of models
-
-## events
-these events are called when certain api actions occur. your events don't have to be these
- - `change` when a model changes from its previous value
- - `add` when a new model is added to the set
- - `del` when a model is removed
+- `set.group(test)` keep track of all elements that pass the test, returns group with following props:
+  - `group.on(event, callback)` add a listener for one of the following events:
+    - `add` when a new model enters the group
+    - `update` when a model in the group changes value
+    - `del` when a model leaves the group calls back with **ID only**
+  - `group.test(callback)` update the condition of the group with known models
+- `set.watch(model)` watch a model returns a watch object:
+  - `watcher.on(event, callback)` add a listener for one of the following events:
+    - `del` watched model has been deleted
+    - `update` watched model has new value
+  - `watcher.prop(prop, callback)` calls callback with the value of prop when it changes
+  - `watcher.watch(callback)` switch target of the watching
 
 # Included Loaders
-todo
+ - `css!` client side only: parses with [less](http://lesscss.org/), minifies and appends css to page
+ - `datauri!` uses [datauri](https://github.com/heldr/datauri), defines as string of datauri
+ - `file!` includes a copy of the file (or directory) in the build directory
+ - `html!` minifies and includes html file. accessible as jquery element
+ - `set!` includes a set definition, handles server side setup and gives you [`set api`](#set-api)
+ - `text!` includes a file as a utf-8 string
+ - `view!` includes a view definition, provides [`view api`](#view-api)
 
 # Included Dependencies
  - [express](http://expressjs.com/) server side routing goodness
@@ -175,3 +177,4 @@ todo
  - [node-memcached](https://github.com/3rd-Eden/memcached) memcached for node
  - [bcrypt](https://github.com/ncb000gt/node.bcrypt.js) password hash
  - [crc-32](https://github.com/SheetJS/js-crc32) crc32 checksumming for detecting when to fire `change` events
+ - [datauri](https://github.com/heldr/datauri) get data uri from file
