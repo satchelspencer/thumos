@@ -112,7 +112,7 @@ thumos by default sets up an email/password based authentication mechanism. cook
 
 # API
 
-## view api
+## views
 - `view.render(selecta, options)` render the view into a parent passing arbitrary options
   - `selecta` jquery selector for view to be inserted into
   - `options` object that is passed to the view's init function
@@ -122,7 +122,7 @@ thumos by default sets up an email/password based authentication mechanism. cook
 - `view.off(event)` turns off event on view
 - `view.trigger(event)` trigger event on view
 
-## set api
+## sets
 - `set.get(ids, callback)` retrieves models by id, calls back with [resultset](#resultset-api)
 - `set.getOne(id, callback)` retrieves model by id, calls back single model
 - `set.update(data, callback)` updates set, returns changed models
@@ -167,14 +167,4 @@ thumos by default sets up an email/password based authentication mechanism. cook
    - [require-css](https://github.com/guybedford/require-less) require plain css and build
      - [csso](https://github.com/css/csso) css optimizer/minifier
      - [less](http://lesscss.org/) less parser
-   - [deasync](https://github.com/abbr/deasync) bodge-enabler for doing crazy requirejs shit
- - [jquery](https://jquery.com/) client side dom management
- - [async](https://github.com/caolan/async) async control flow
- - [postcss](https://github.com/postcss/postcss) css processor  
- - [autoprefixer](https://github.com/postcss/autoprefixer) handles browser prefixes at build time
- - [rimraf](https://github.com/isaacs/rimraf) rm -rf
- - [cheerio](https://github.com/cheeriojs/cheerio) server side dom management
- - [node-memcached](https://github.com/3rd-Eden/memcached) memcached for node
- - [bcrypt](https://github.com/ncb000gt/node.bcrypt.js) password hash
- - [crc-32](https://github.com/SheetJS/js-crc32) crc32 checksumming for detecting when to fire `change` events
- - [datauri](https://github.com/heldr/datauri) get data uri from file
+   - [deasync](https://github.com/abbr/deasync) bodge-ena

@@ -1,6 +1,7 @@
 define({
 	init : browser(function(config, callback){
 		var _ = require('underscore');
+		var $ = require('jquery');
 		var ajax = require('ajax')();
 		var validator = require('validator');
 		var async = require('async');
@@ -79,11 +80,11 @@ define({
 						if(inp.error) callback(inp.error);
 						else ajax.req('delete', api.config.path+'/i/'+inp.ids.join(','), function(e, deleted){
 							_.each(deleted, function(modelId){
-								if(api.watchers[modelId]) api.watchers[modelId].util.trigger('del');
 								_.each(api.groups, function(group){
 									if(group.util.models[modelId]){
 										delete group.util.models[modelId];
 										group.util.trigger('del', modelId);
+										group.util.trigger('models', _.values(group.util.models));
 									}
 								});
 							});
@@ -113,22 +114,49 @@ define({
 							else api.decode(models, api.util.postprocess(callback));
 						});
 					},
-					group : function(test){
+					group : function(input){
 						var events = {};
+						var props = {};
 						var group = {
 							on : function(event, callback){
-								events[event] = callback;
+								_.each(event.split(' '), function(event){
+									events[event] = events[event]||$.Callbacks('memory unique');
+									events[event].add(callback);
+								});
 								return group;
 							},
-							test : function(test){
-								test = test||function(){return true;};
+							off : function(event){
+								_.each(event.split(' '), function(event){
+									if(events[event]) events[event].empty();
+								});
+							},
+							prop : function(propName, callback){
+								group.on('prop!'+propName, callback);
+								return group;
+							},
+							bind : function(input){
+								var test = input||function(){return false;};
+								/* if we are given a set of models, test will be if included */
+								if(!_.isFunction(test)){
+									var ids = parse(test).ids;
+									test = function(model){
+										return _.contains(ids, model._id);
+									}
+								}	
 								group.util.test = test;
+								/* now compare against all already known models */
 								_.each(api.models, function(model){
 									group.util.catch(model);
 								})
 								return group;
 							},
+							models : function(callback){
+								group.on('add.local del.local update.local', function(){
+									callback(_.values(group.util.models));
+								});
+							},
 							util : {
+								models : {},
 								catch : function(model){
 									if(!group.util.test) return false;
 									var valid = group.util.test(model);
@@ -139,76 +167,53 @@ define({
 											group.util.models[model._id] = model;
 											group.util.trigger('add', model);
 										}
+										var oldModel = api.models[model._id];
+										_.each(model, function(newVal, prop){
+											if(!ingroup || !oldModel || (JSON.stringify(oldModel[prop]) != JSON.stringify(newVal))){
+												group.util.trigger('prop!'+prop, newVal, model._id);
+											}
+										});
 									}else if(ingroup){
 										delete group.util.models[model._id];
 										group.util.trigger('del', model._id); //trigger w/id
 									}
 								},
-								trigger : function(event, value){
-									if(events[event]) events[event](value);
-								},
-								models : {}
+								trigger : function(event){
+									var passthrough = _.tail(arguments);
+									_.each(event.split(' '), function(event){
+										_.each(events, function(callback, eventName){
+											if(eventName == event || !eventName.indexOf(event+'.')) callback.fireWith(this, passthrough);
+										})
+									})
+								}
 							}
-						}
-						group.test(test);
+						};
+						var underscoreMethods = ['each', 'map', 'reduce', 'reduceRight', 'find', 'filter', 'where', 'findWhere', 'reject', 'every', 'some', 'contains', 'invoke', 'pluck', 'max', 'min', 'sortBy', 'groupBy', 'indexBy', 'countBy', 'shuffle', 'sample', 'toArray', 'size', 'partition'];
+						_.each(underscoreMethods, function(methodName){
+							group[methodName] = function(){
+								var args = arguments;
+								var done;
+								function complete(callback){
+									done = callback;
+								}
+								group.models(function(models){
+									var topass = Array.prototype.slice.call(args, 0);
+									topass.unshift(models);
+									var val = _[methodName].apply(this, topass);
+									if(done) done(val);
+								});
+								return complete;
+							}
+						});
+						group.bind(input);
 						api.groups.push(group);
 						return group;
 					},
-					watch : function(model){
-						var events = {};
-						var props = {};
-						var watcher = {
-							on : function(event, callback){
-								events[event] = callback;
-								return watcher;
-							},
-							prop : function(propName, callback){
-								props[propName] = callback;
-								if(watcher.util.modelId) callback(api.models[watcher.util.modelId][propName]);
-								return watcher;
-							},
-							watch : function(model){
-								var newId = model._id||model;
-								if(watcher.util.modelId){
-									var old = api.watchers[watcher.util.modelId];
-									old.splice(old.indexOf(watcher), 1);
-								}
-								watcher.util.modelId = newId;
-								api.watchers[newId] = api.watchers[newId]||[];
-								api.watchers[newId].push(watcher);
-								_.each(api.models[newId], function(val, prop){
-									if(props[prop]) props[prop](val);
-								});	
-								return watcher;
-							},
-							util : {
-								catch : function(model){
-									var oldModel = api.models[model._id];
-									_.each(oldModel, function(oldVal, prop){
-										if(JSON.stringify(oldVal) != JSON.stringify(model[prop])){
-											if(props[prop]) props[prop](model[prop]);
-										}
-									});
-								},	
-								trigger : function(event, value){
-									if(events[event]) events[event](value);
-								}
-							}
-						}
-						if(model) watcher.watch(model);
-						return watcher;
-					},
 					models : {},
-					watchers : {},
 					groups : [],
 					fn : {},
 					config : config,
 					util : {
-						ebase : function(id, event){
-							api.events[id] = api.events[id]||{};
-							api.events[id][event] = api.events[id][event]||[];
-							return api.events[id][event];
-						},
 						checksums : {}, //object of checksums for model ids
 						getChanged : function(inp){ //given models return the changed ones
 							var inp = parse(inp);
@@ -224,6 +229,7 @@ define({
 						},
 						/* process models after they are retrieved from server and trigger changed */
 						postprocess : function(callback){
+							callback = callback||function(){};
 							return function(e, models){
 								if(e) callback(e);
 								else async.map(models, function(model, modelDecoded){
@@ -242,14 +248,10 @@ define({
 									else{
 										var diff = api.util.getChanged(decoded); //incudes new
 										_.each(diff, function(model){
-											if(api.watchers[model._id]) _.each(api.watchers[model._id], function(watcher){
-												watcher.util.trigger('update', models);
-												watcher.util.catch(model);
-											});
-											api.models[model._id] = model;
 											_.each(api.groups, function(group){
 												group.util.catch(model);
 											});
+											api.models[model._id] = model;
 										});
 										callback(e, decoded);
 									}
