@@ -62,12 +62,33 @@ define({
 					get : function(inp, callback){
 						var inp = parse(inp);
 						if(inp.error) callback(inp.error);
-						else ajax.req('get', api.config.path+'/i/'+inp.ids.join(','), api.util.postprocess(callback));
+						else{
+							var remote = [];
+							var models = _.map(inp.ids, function(id){
+								if(!api.models[id]) remote.push(id);
+								return api.models[id]||id; //leave id in place if not found
+							});
+							if(remote.length) api.load(remote, function(e, remote){
+								if(e) callback(e);
+								else{
+									_.each(remote, function(model){
+										models[models.indexOf(model._id)] = model;
+									});
+									if(callback) callback(null, models);
+								}
+							});
+							else if(callback) callback(null, models);
+						}
 					},
 					getOne : function(id, callback){
 						api.get(id, function(e, models){
 							callback(e, models[0]);
 						});
+					},
+					load : function(inp, callback){
+						var inp = parse(inp);
+						if(inp.error) callback(inp.error);
+						else ajax.req('get', api.config.path+'/i/'+inp.ids.join(','), api.util.postprocess(callback));
 					},
 					update : function(models, callback){
 						api.valid(models, function(e, update){
@@ -139,6 +160,7 @@ define({
 								/* if we are given a set of models, test will be if included */
 								if(!_.isFunction(test)){
 									var ids = parse(test).ids;
+									if(ids) api.get(ids);
 									test = function(model){
 										return _.contains(ids, model._id);
 									}
