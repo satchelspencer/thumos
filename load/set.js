@@ -173,7 +173,7 @@ define({
 								return group;
 							},
 							models : function(callback){
-								group.on('add.local del.local update.local', function(){
+								group.on('add del update', function(){
 									callback(_.values(group.util.models));
 								});
 							},
@@ -203,9 +203,8 @@ define({
 								trigger : function(event){
 									var passthrough = _.tail(arguments);
 									_.each(event.split(' '), function(event){
-										_.each(events, function(callback, eventName){
-											if(eventName == event || !eventName.indexOf(event+'.')) callback.fireWith(this, passthrough);
-										})
+										events[event] = events[event]||$.Callbacks('memory unique');
+										events[event].fireWith(this, passthrough);
 									})
 								}
 							}
