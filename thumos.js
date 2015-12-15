@@ -162,32 +162,32 @@ var api = {
 							var router = express.Router();
 							router.route('/')
 								.get(function(req, res){ //list according to default query
-									set.find({}, handle(res));
+									set.find({}, handle(res), req.id||0);
 								})
 								.post(json, function(req, res){
 									//add new model(s) to set, return models
-									set.add(req.body, handle(res));
+									set.add(req.body, handle(res), req.id||0);
 								})
 								.put(json, function(req, res){
 									//update existing models, return models
-									set.update(req.body, handle(res));
+									set.update(req.body, handle(res), req.id||0);
 								});
 							router.route('/i/:ids')
 								.get(function(req, res){ //get models by id
-									set.get(req.params.ids.split(','), handle(res));
+									set.get(req.params.ids.split(','), handle(res), req.id||0);
 								})
 								.delete(function(req, res){ //delete models by id
-									set.del(req.params.ids.split(','), handle(res));
+									set.del(req.params.ids.split(','), handle(res), req.id||0);
 								});
 							router.route('/q/:queryname').post(json, function(req, res){
-								set.query(req.params.queryname, req.body, handle(res));
+								set.query(req.params.queryname, req.body, handle(res), req.id||0);
 							});
 							/* find and search simply passit to their server side counterparts */
 							router.route('/find').post(json, function(req, res){
-								set.find(req.body, handle(res));
+								set.find(req.body, handle(res), req.id||0);
 							});
 							router.route('/search').post(json, function(req, res){
-								set.search(req.body, handle(res));
+								set.search(req.body, handle(res), req.id||0);
 							});
 							config.router.use(set.config.path||'/'+set.config.name, router);
 							setReady();
