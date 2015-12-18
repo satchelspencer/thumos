@@ -141,10 +141,12 @@ var api = {
 					}
 				}
 				/* insert thumos config as a requireble module */
+				var toRequire = ['config'];
 				bilt.require({
 					paths : paths,
-					deps : ['config']
+					deps : toRequire //maybe require `auth` here????
 				}, function(e, loaded){
+					/* get required sets for routing */
 					_.extend(_.values(loaded)[0], config); //add
 					bilt.require({
 						paths : paths,

@@ -3,12 +3,14 @@ it does some serious shit
  - [`configuration`](#configuration)
    - [`views`](#creating-views)
    - [`set`](#creating-sets)
+   - [`types`](#custom-property-types)
    - [`access`](#access-modules)
    - [`queries`](#queries)
    - [`authentication`](#authentication)
  - [`api`](#api)
    - [`views`](#view-api)
    - [`sets`](#set-api)
+   - [`groups`](#group-api)
  - [`loaders`](#included-loaders)
  - [`dependencies`](#included-dependencies)
    
@@ -31,8 +33,7 @@ setup a new thumos build given options:
 ## creating views
 view objects have the following properties:
   - `html`: html string for dom to be inserted at render
-  - `init(options)` **fn**: init callback. `this` contains [view api](#view-api)
-  - `fn` : object of functions. that will be appended to the view api, also accessible from init function
+  - `init(view, options)` **fn**: init callback called with view dom `view` and any options passed into the constructor
 
 *once required views return a function that must be called to initialize a new instance of the view*
 
@@ -52,17 +53,18 @@ define([
 sets are a queryable, updateable collection of multiple models. they sync with the client and the server.
  - `name` set name (usually plural of model name) used in url routing
  - `collection` mongo collection (defaults to `name`)
- - `properties` : object of properties, or [validator](#property-validators). properties can simply be a model or be defined as so:
+ - `properties` : object of properties, or [validator](#property-validators). properties each may have the following options:
    - `valid` : [validator function](#property-validators) that calls back with validity of property
    - `type` : [property type](#custom-property-types)
-   - `listed` : bool if model should be included in list
+   - `private` : true if model should be inaccessable from client
+   - `readonly` : true if client should not be able to modify the property
    - `onchange : function(model, callback)` called on change of value for model callback optionally with new value for *entire* model or error
-   - `compute : function(model, callback)` called on model change, callback sets the value of the property based on the whole model
+   - `compute : function(model, callback)` called on model change, callback sets the value of the property based on the whole model at write time
  - `access` [access module](#access-module) default access controls for entire set
  - `queries` object of set [queries](#queries)
  - `functions` object of custom functions that act on multiple models in a set
 
-## custom property types
+### custom property types
 property types are passed to thumos as an object with the following properties:
  - `init : function(thumosConfig, props, callback)` called once for this type
    - `thumosConfig` thumos' [config object](#configuration)
@@ -76,7 +78,7 @@ property types are passed to thumos as an object with the following properties:
      - `finalize : function(value, callback)` **server** modify on succesful server side save
      - `purge : function(value, callback)` **server** called on object deletion
  
-## property validators
+### property validators
 a function with arguments `input` and `callback` takes input does some operation and calls back with error as first parameter and new value as second. example:
 ~~~javascript
 function(name, callback){
@@ -85,12 +87,12 @@ function(name, callback){
 }
 ~~~
 
-## access modules
-access modules are an object with four properties `read` `write` `add` `delete` each is defined by either
- - [`query`](#queries) that is passed user id. has better performance, especially on read which governs queries from mongodb
- - `function(user, callback)` uid is the user id. keep in mind code is run on server
+### access control
+thumos allows custom access control mechanisms defined by the following object:
+ - `read` : query function that is passed the id of the requester, selects models that are eligible to be accessed
+ - `write` : same but for modifiable models
 
-## queries
+### queries
 queries are defined by function that takes an object of parameters and returns a mongodb query object example:
 ~~~ javascript
 minAge : function(age){
@@ -98,10 +100,8 @@ minAge : function(age){
 }
 ~~~
 
-## authentication 
-thumos allows custom authentication mechanisms defined by the following object:
- - `init` : `function(set, callback)` setup any routes you will need, calls back with a router to be used on app
- - `verify` : `function(req, res, next)` [express](http://expressjs.com/) middleware. MUST set req.user to some unique id/access token
+# authentication 
+authentication modules control the identification of a client, they must be a function with parameters `function(input, callback)`, where input may be any information used to authenticate (i.e. username/pass) and callback with node style error value params. must call back with a unique identifier
 
 thumos by default sets up an email/password based authentication mechanism. cookie based sessions based on [this paper](http://www.cse.msu.edu/~alexliu/publications/Cookie/cookie.pdf). It takes the following options:
  - `set` path to userset
@@ -113,14 +113,7 @@ thumos by default sets up an email/password based authentication mechanism. cook
 # API
 
 ## view api
-- `view.render(selecta, options)` render the view into a parent passing arbitrary options
-  - `selecta` jquery selector for view to be inserted into
-  - `options` object that is passed to the view's init function
-- `view.$(selecta)` selects with jquery within the view
-- `view.dom` jquery object of view
-- `view.on(event, callback)` binds `callback` to view when event is triggered
-- `view.off(event)` turns off event on view
-- `view.trigger(event)` trigger event on view
+requireing a view with `view!` gives you a constructor whose arguments will be passed to the view's `init`. the constructor returns the dom of the view.
 
 ## set api
 - `set.get(ids, callback)` retrieves models by id, calls back with [resultset](#resultset-api)
@@ -131,18 +124,17 @@ thumos by default sets up an email/password based authentication mechanism. cook
 - `set.find(props, callback)` returns resultset of models where properties are equal to parameter `props`
 - `set.findOne(props, callback)` returns a single model
 - `set.query(query, params, callback)` query a set, callback with [resultset](#resultset-api)
-- `set.on(event, which, callback)` binds `callback` to `which` (array of models or ids) when [`event`](#events) is triggered
-- `set.off(event, which)` turns off [`event`](#events) on models
-- `set.trigger(event, which)` trigger [`event`](#events) on models
-- `set.group(input)` follow a subset of models in a set determined by input (models or predicate function to filter availiable models in the set). one initialized it returns a chaining object with the followoing properties:
-  - `group.on(event, callback)` add a listener for one of the following events:
+- `set.group(input)` follow a subset of models in a set determined by input (models or predicate function to filter availiable models in the set). one initialized it returns a [group object](#group-api)
+  
+## group api
+- `group.on(event, callback)` add a listener for one of the following events:
     - `add` when a new model enters the group
     - `update` when a model in the group changes value
     - `del` when a model leaves the group calls back with **ID only**
   - `group.off(event)` disable callback for event
   - `group.prop(propName, callback)` add a listener for changed properties within the group. calls back with paremeters `callback(propValue, whichModel)` where propValue is the value, and whichModel is the id of the model in question
   - `group.models(callback)` attach a listener to add del and update, calls back with entire group
-  - `group.bind(input)` update which models should now be tracked by the group, retiggers events as needed
+  - `group.bind(input)` update which models should now be tracked by the group, retiggers events as needed. `input` is a model, array of models or a testing function
   - [`underscore funtions`](http://underscorejs.org/#collections) (collection functions only) proxy to their underscore equivalents. a call to one of these functions returns a function to which you may pass a callback to catch the return value of the underscore function (if any). see example:
     
     ~~~ Javascript
