@@ -135,6 +135,7 @@ requireing a view with `view!` gives you a constructor whose arguments will be p
   - `group.prop(propName, callback)` add a listener for changed properties within the group. calls back with paremeters `callback(propValue, whichModel)` where propValue is the value, and whichModel is the id of the model in question
   - `group.models(callback)` attach a listener to add del and update, calls back with entire group
   - `group.bind(input)` update which models should now be tracked by the group, retiggers events as needed. `input` is a model, array of models or a testing function
+  - `group.order(predicate, reverse)` set the ordering function of the set. predicate may be a function that takes in a model and returs the value to be sorted from, or a string naming the property to be sorted on. reverse (optional) reverses the sort order. Calls to add/update events have a second parameter (the index in the sorted order)
   - [`underscore funtions`](http://underscorejs.org/#collections) (collection functions only) proxy to their underscore equivalents. a call to one of these functions returns a function to which you may pass a callback to catch the return value of the underscore function (if any). see example:
     
     ~~~ Javascript

@@ -94,7 +94,7 @@ define({
 						api.valid(models, function(e, update){
 							if(e) callback(e);
 							else ajax.req('put', api.config.path, update, api.util.postprocess(callback));
-						}, true); //update validation
+						}, 0, true); //update validation
 					},
 					del : function(inp, callback){ //del
 						var inp = parse(inp);
@@ -103,6 +103,7 @@ define({
 							_.each(deleted, function(modelId){
 								_.each(api.groups, function(group){
 									if(group.util.models[modelId]){
+										group.util.order = _.without(group.util.order, modelId);
 										delete group.util.models[modelId];
 										group.util.trigger('del', modelId);
 										group.util.trigger('models', _.values(group.util.models));
@@ -138,6 +139,8 @@ define({
 					group : function(input){
 						var events = {};
 						var props = {};
+						var order = function(){return 0;};
+						var reverse = false;
 						var group = {
 							on : function(event, callback){
 								_.each(event.split(' '), function(event){
@@ -177,17 +180,35 @@ define({
 									callback(_.values(group.util.models));
 								});
 							},
+							order :  function(predicate, r){
+								var test = predicate;
+								if(_.isString(predicate)) test = function(model){
+									return model[predicate];
+								}
+								reverse = r;
+								order = test;
+								_.each(group.util.models, function(model){
+									group.util.catch(model);
+								})
+							},
 							util : {
 								models : {},
+								order : [],
 								catch : function(model){
 									if(!group.util.test) return false;
 									var valid = group.util.test(model);
 									var ingroup = group.util.models[model._id];
 									if(valid){
-										if(ingroup) group.util.trigger('update', model);
+										group.util.order = _.chain(group.util.order.concat(model._id))
+											.uniq()
+											.sortBy(function(id){
+												return order(id==model._id?model:api.models[id]);
+											}).value();
+										if(reverse) group.util.order.reverse();
+										if(ingroup) group.util.trigger('update', model, group.util.order.indexOf(model._id));
 										else{ //not currently in group, but should be
 											group.util.models[model._id] = model;
-											group.util.trigger('add', model);
+											group.util.trigger('add', model, group.util.order.indexOf(model._id));
 										}
 										var oldModel = api.models[model._id];
 										_.each(model, function(newVal, prop){
@@ -196,6 +217,7 @@ define({
 											}
 										});
 									}else if(ingroup){
+										group.util.order = _.without(group.util.order, model._id);
 										delete group.util.models[model._id];
 										group.util.trigger('del', model._id); //trigger w/id
 									}
