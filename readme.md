@@ -62,7 +62,6 @@ sets are a queryable, updateable collection of multiple models. they sync with t
    - `compute : function(model, callback)` called on model change, callback sets the value of the property based on the whole model at write time
  - `access` [access module](#access-module) default access controls for entire set
  - `queries` object of set [queries](#queries)
- - `functions` object of custom functions that act on multiple models in a set
 
 ### custom property types
 property types are passed to thumos as an object with the following properties:
