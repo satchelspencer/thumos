@@ -252,7 +252,7 @@ define({
 							if(e) callback('permission denied: '+e);
 							else{
 								var query = _.mapObject(props, function(propVal, propName) {
-									return new RegExp(propVal, "i");
+									return new RegExp(propVal.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&"), "i");
 								});
 								collection.find({
 									$and : [
