@@ -144,7 +144,13 @@ define({
 						var group = {
 							on : function(event, callback){
 								_.each(event.split(' '), function(event){
-									events[event] = events[event]||$.Callbacks('memory unique');
+									if(event == 'add'){
+										/* no memory for adding callbacks, since we're manually implementing "memory" */
+										events[event] = events[event]||$.Callbacks();
+										_.each(group.util.models, function(model){
+											callback(model);
+										})
+									}else events[event] = events[event]||$.Callbacks('memory');
 									events[event].add(callback);
 								});
 								return group;
@@ -159,6 +165,7 @@ define({
 								return group;
 							},
 							bind : function(input){
+								if(input == 'all') input = function(){return true;};
 								var test = input||function(){return false;};
 								/* if we are given a set of models, test will be if included */
 								if(!_.isFunction(test)){
@@ -225,8 +232,8 @@ define({
 								trigger : function(event){
 									var passthrough = _.tail(arguments);
 									_.each(event.split(' '), function(event){
-										events[event] = events[event]||$.Callbacks('memory unique');
-										events[event].fireWith(this, passthrough);
+										events[event] = events[event]||$.Callbacks(event == 'add'?undefined:'memory'); //no memory for add
+										events[event].fire.apply(this, passthrough);
 									})
 								}
 							}
