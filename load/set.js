@@ -212,9 +212,9 @@ define({
 												return order(id==model._id?model:api.models[id]);
 											}).value();
 										if(reverse) group.util.order.reverse();
+										group.util.models[model._id] = model;
 										if(ingroup) group.util.trigger('update', model, group.util.order.indexOf(model._id));
 										else{ //not currently in group, but should be
-											group.util.models[model._id] = model;
 											group.util.trigger('add', model, group.util.order.indexOf(model._id));
 										}
 										var oldModel = api.models[model._id];
