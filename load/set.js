@@ -170,16 +170,16 @@ define({
 								/* if we are given a set of models, test will be if included */
 								if(!_.isFunction(test)){
 									var ids = parse(test).ids;
-									if(ids) api.get(ids);
 									test = function(model){
 										return _.contains(ids, model._id);
 									}
-								}	
+									if(ids) api.get(ids, function(e, models){
+										_.each(models, group.util.catch);
+									});
+								}
 								group.util.test = test;
 								/* now compare against all already known models */
-								_.each(api.models, function(model){
-									group.util.catch(model);
-								})
+								_.each(api.models, group.util.catch);
 								return group;
 							},
 							models : function(callback){
@@ -255,8 +255,8 @@ define({
 								return complete;
 							}
 						});
-						group.bind(input);
 						api.groups.push(group);
+						group.bind(input);
 						return group;
 					},
 					models : {},
