@@ -2,7 +2,7 @@ define({
 	init : browser(function(config, callback){
 		var _ = require('underscore');
 		var $ = require('jquery');
-		var ajax = require('ajax')();
+		var ajax = require('ajax');
 		var validator = require('validator');
 		var async = require('async');
 		var crc32 = require('crc32');
@@ -110,14 +110,14 @@ define({
 									}
 								});
 							});
-							callback(e, deleted);
+							if(callback) callback(e, deleted);
 						});
 					},
-					add : function(models, callback){
+					add : function(models, callback, progress){
 						api.valid(models, function(e, toAdd){
 							if(e) callback(e);
 							else ajax.req('post', api.config.path, toAdd, api.util.postprocess(callback));
-						});
+						}, undefined, undefined, progress);
 					},
 					find : function(props, callback){ //decode
 						ajax.req('post', api.config.path+'/find', props, api.util.postprocess(callback));
