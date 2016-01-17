@@ -62,6 +62,10 @@ sets are a queryable, updateable collection of multiple models. they sync with t
    - `compute : function(model, callback)` called on model change, callback sets the value of the property based on the whole model at write time
  - `access` [access module](#access-module) default access controls for entire set
  - `queries` object of set [queries](#queries)
+ - `routes` object with keys being route names and values being [middleware](http://expressjs.com/en/guide/using-middleware.html) for that route. default method is `get`. more options can be included in the value with the followig format:
+   - `route` path for express route
+   - `method` http method for route get, post, etc
+   - `middleware` express middleware function
 
 ### custom property types
 property types are passed to thumos as an object with the following properties:

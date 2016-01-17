@@ -64,7 +64,8 @@ var api = {
 			bilt.build({
 				paths : paths,
 				deps : ['view!'+pageConfig.view, 'jquery', 'jqext'],
-				verbose : true
+				verbose : true,
+				cache : path.join(__dirname, '/tmp/cache.json')
 			}, function(view, $){
 				$(window).ready(function(){
 					$('body').append(view());
@@ -191,6 +192,18 @@ var api = {
 							router.route('/search').post(json, function(req, res){
 								set.search(req.body, handle(res), req.id||0);
 							});
+
+							/* custom routes setup */
+							if(set.config.routes) _.each(set.config.routes, function(options, name){
+								route = path.join('/', options.route||name);
+								/* key defaults to just be middleware funtion with get method */
+								var middleware = options.middleware||options;
+								var method = options.method||'get';
+								/* pass all middleware given to the appropriate route */
+								router.route(route).get(middleware);
+							});
+
+							/* add to main thumos router */
 							config.router.use(set.config.path||'/'+set.config.name, router);
 							setReady();
 						}, callback);					
