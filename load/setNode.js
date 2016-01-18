@@ -27,7 +27,7 @@ define({
 		/* access control is overridden if called by server w/ no id */
 		var access = {
 			read : function(id,c){
-				if(id === undefined) c(null, {});
+				if(id === undefined) c(null, {}); //when undefined, it is the server calling so let it do whatever the fuck it wants
 				else config.access.read(id, function(e, q){
 					c(e, q||{}); //default to empty query
 				});
