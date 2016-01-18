@@ -27,7 +27,9 @@ setup a new thumos build given options:
   - `paths` **object**: bilt path specific configs, see https://github.com/satchelspencer/bilt#configuration-options
   - `app` **express app**: express app to build model API routes on
   - `route` : base route for thumos (defaults to '/')
-  - `auth` : [authentication plugin](#authentication)
+  - `auth` : authentication function used by the [authentication module](#authentication). called with params:
+    - `cred` arbitrary credentials parameter, passed from `auth.get`
+    - `callback` callback on completeion with `error, uid` 
   
 
 ## creating views
@@ -104,14 +106,10 @@ minAge : function(age){
 ~~~
 
 # authentication 
-authentication modules control the identification of a client, they must be a function with parameters `function(input, callback)`, where input may be any information used to authenticate (i.e. username/pass) and callback with node style error value params. must call back with a unique identifier
-
-thumos by default sets up an email/password based authentication mechanism. cookie based sessions based on [this paper](http://www.cse.msu.edu/~alexliu/publications/Cookie/cookie.pdf). It takes the following options:
- - `set` path to userset
- - `id` name of property to store id
- - `pass` name of property to store password ([bcrypt](https://github.com/ncb000gt/node.bcrypt.js) password hash)
- - `sessionLength` number of seconds to persist session, defaults to 3600 (1hr)
- - `memcached`, defaults to 'localhost:11211'
+thumos' authentication is controlled through the global module `auth` with the following api:
+ - `auth.get(cred, callback)` pass credentials parameter to server side for validation defined by [`config.auth`](#configuration). calls back with `error, uid`
+ - `auth.revoke(callback)` revokes authentication, calls back with success status
+ - `auth.uid` property, set to authenticated id (id authenticated)
 
 # API
 
@@ -130,7 +128,7 @@ requireing a view with `view!` gives you a constructor whose arguments will be p
 - `set.group(input)` follow a subset of models in a set determined by input (models or predicate function to filter availiable models in the set). one initialized it returns a [group object](#group-api)
   
 ## group api
-- `group.on(event, callback)` add a listener for one of the following events:
+  - `group.on(event, callback)` add a listener for one of the following events:
     - `add` when a new model enters the group
     - `update` when a model in the group changes value
     - `del` when a model leaves the group calls back with **ID only**

@@ -29,6 +29,7 @@ var api = {
 			},
 			'file' : local('load/file.js'),
 			'ajax' : local('lib/ajax.js'),
+			'auth' : local('lib/auth.js'),
 			'validator' : local('lib/validator.js'),
 			'config' : local('lib/config.js'),
 			'jquery' : {
@@ -201,7 +202,7 @@ var api = {
 										});
 										res.cookie('auth', cstring, {expires : exptime, httpOnly: true, signed : true, secure : true});
 										res.cookie('loggedin', true, {expires : exptime});
-										res.json({message : 'success'});
+										res.json({message : 'success', uid : uid});
 									});
 								}
 							})
