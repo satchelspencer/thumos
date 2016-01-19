@@ -151,7 +151,10 @@ define({
 							if(e) callback(e);
 							else middleware('store', models, function(e, models){
 								if(e) callback(e);
-								else collection.insert(models, callback);
+								else middleware('init', models, function(e, models){
+									if(e) callback(e);
+									else collection.insert(models, callback);
+								}, uid);
 							}, uid); 
 						}, uid);
 					});
