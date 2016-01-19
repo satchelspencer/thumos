@@ -40,7 +40,7 @@ define({
 		var api = {
 			get: function(ids, callback, uid) {
 				access.read(uid, function(e, accessQuery){
-					if(e) callback('permission denied: '+e);
+					if(e) callback({permission:e});
 					else{
 						/* get all ids */
 						var invalid = _.reject(ids, thumosConfig.db.id);
@@ -76,7 +76,7 @@ define({
 			},
 			update: function(data, callback, uid) {
 				access.write(uid, function(e, accessQuery){
-					if(e) callback('permission denied: '+e);
+					if(e) callback({permission:e});
 					else propsControl(data, true, function(e, models){ 
 						if (e) callback(e);
 						else middleware('valid', models, function(e, models) { //make sure its valid
@@ -115,7 +115,7 @@ define({
 				if (!_.isArray(ids)) ids = [ids]; //force to array
 				access.write(uid, function(e, accessQuery){
 					var removed = []
-					if(e) callback('permission denied: '+e);
+					if(e) callback({permission:e});
 					else async.eachSeries(ids, function(id, cb) {
 						collection.findOne({
 							$and : [
@@ -144,7 +144,7 @@ define({
 			},
 			add: function(models, callback, uid) {
 				access.write(uid, function(e, accessQuery){
-					if(e) callback('permission denied: '+e);
+					if(e) callback({permission:e});
 					else propsControl(models, false, function(e, models){ 
 						if(e) callback(e);
 						else middleware('valid', models, function(e, models) {
@@ -162,7 +162,7 @@ define({
 			},
 			find: function(props, callback, uid) {
 				access.read(uid, function(e, accessQuery){
-					if(e) callback('permission denied: '+e);
+					if(e) callback({permission:e});
 					else{
 						var query = {};
 						/* make sure the only thing we gettin is actual props */
@@ -190,7 +190,7 @@ define({
 			},
 			search: function(props, callback, uid) {
 				access.read(uid, function(e, accessQuery){
-					if(e) callback('permission denied: '+e);
+					if(e) callback({permission:e});
 					else{
 						var query = _.mapObject(props, function(propVal, propName) {
 							return new RegExp(propVal.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&"), "i");
@@ -209,7 +209,7 @@ define({
 			query: function(query, params, callback, uid) {
 				if (!config.queries[query]) callback('query: ' + query + ' does not exist');
 				else access.read(uid, function(e, accessQuery){
-					if(e) callback('permission denied: '+e);
+					if(e) callback({permission:e});
 					else collection.find({
 						$and : [
 							config.queries[query](params),
