@@ -30,7 +30,8 @@ var api = {
 			'file' : local('load/file.js'),
 			'ajax' : local('lib/ajax.js'),
 			'auth' : local('lib/auth.js'),
-			'validator' : local('lib/validator.js'),
+			'middleware' : local('lib/middleware.js'),
+			'props' : local('lib/props.js'),
 			'config' : local('lib/config.js'),
 			'jquery' : {
 				source : local('bower_components/jQuery/dist/jquery.min.js'),
@@ -274,7 +275,7 @@ var api = {
 								var middleware = options.middleware||options;
 								var method = options.method||'get';
 								/* pass all middleware given to the appropriate route */
-								router.route(route).get(middleware);
+								router.route(route)[method](middleware);
 							});
 
 							/* add to main thumos router */

@@ -1,11 +1,11 @@
 # Thumos
-it does some serious shit
+it does some serious shit™
  - [`configuration`](#configuration)
    - [`views`](#creating-views)
    - [`set`](#creating-sets)
-   - [`types`](#custom-property-types)
-   - [`access`](#access-modules)
-   - [`queries`](#queries)
+     - [`middleware`](#set-middleware)
+     - [`access`](#access-control)
+     - [`queries`](#queries)
    - [`authentication`](#authentication)
  - [`api`](#api)
    - [`views`](#view-api)
@@ -56,41 +56,35 @@ sets are a queryable, updateable collection of multiple models. they sync with t
  - `name` set name (usually plural of model name) used in url routing
  - `collection` mongo collection (defaults to `name`)
  - `properties` : object of properties, or [validator](#property-validators). properties each may have the following options:
-   - `valid` : [validator function](#property-validators) that calls back with validity of property
-   - `type` : [property type](#custom-property-types)
-   - `private` : true if model should be inaccessable from client
+   - `optional` : true if property is not required in model
    - `readonly` : true if client should not be able to modify the property
-   - `onchange : function(model, callback)` called on change of value for model callback optionally with new value for *entire* model or error
-   - `compute : function(model, callback)` called on model change, callback sets the value of the property based on the whole model at write time
+   - validation through [set middleware](#set-middleware). key is the middleware name, value is the function.
  - `access` [access module](#access-module) default access controls for entire set
  - `queries` object of set [queries](#queries)
  - `routes` object with keys being route names and values being [middleware](http://expressjs.com/en/guide/using-middleware.html) for that route. default method is `get`. more options can be included in the value with the followig format:
    - `route` path for express route
    - `method` http method for route get, post, etc
    - `middleware` express middleware function
-
-### custom property types
-property types are passed to thumos as an object with the following properties:
- - `init : function(thumosConfig, props, callback)` called once for this type
-   - `thumosConfig` thumos' [config object](#configuration)
-   - `props` object with keys as identifiers of initlized properties, values are the configs for each instance
- - `api : function(identifier, propConfig, callback)` setup for each property
-   - `identifier` unique string value representing which property is being initiaized
-   - `propConfig` config options passed in with property
-   - `callback(e, api)` when finished call back with api containing any of the following:
-     - `encode : function(value, callback)` modify value when saving object
-     - `decode : function(value, callback)` modify value retrieving object
-     - `finalize : function(value, callback)` **server** modify on succesful server side save
-     - `purge : function(value, callback)` **server** called on object deletion
  
-### property validators
-a function with arguments `input` and `callback` takes input does some operation and calls back with error as first parameter and new value as second. example:
-~~~javascript
-function(name, callback){
-  if(!name.match(/(.*){5,}/)) callback('name must be at least 5 chars long');
-  else callback(null, name.toLowerCase());
-}
-~~~
+### set middleware
+set middleware are functions that are passed a model at various stages in thumos. middleware functions always have 3 parameters:
+ - `input` the value of a model's property (or the entire model)
+ - `callback` a function with 2 arguments `error` and `value`. error will stop the current function and if supplied, value will replace the `input` to the middleware
+ - `uid` the unique identifier for of the acting party. derived from thumos' [authentication](#authentication)
+the available middleware bindings are `valid, send, store, remove`. they are called in the following order:
+ - `add/update`
+   1. client calls `set.add` or `set.update`
+   2. `send` is called on each model
+   3. `valid` is called on each model
+   4. the browser sends the models to the server
+   5. `valid` is called on each model (on the server)
+   6. `store` is called on each model (on the server)
+   7. the model is saved to the database
+ - `delete`
+   1. client calls `set.delete`
+   2. request is sent to server
+   3. `remove` is called on each model (on the server)
+   4. the models are removed from the database
 
 ### access control
 thumos allows custom access control mechanisms defined by the following object:
@@ -159,13 +153,6 @@ requireing a view with `view!` gives you a constructor whose arguments will be p
    - [cookie-parser](https://github.com/expressjs/cookie-parser)
    - [body-parser](https://github.com/expressjs/body-parser)
  - [mongojs](https://github.com/mafintosh/mongojs) mongo api in node
- - [requirejs](http://requirejs.org/) core of loading/build
-   - [requirejs-text](https://github.com/requirejs/text) load text/html
-   - [require-less](https://github.com/guybedford/require-less) require css/less and build
-   - [require-css](https://github.com/guybedford/require-less) require plain css and build
-     - [csso](https://github.com/css/csso) css optimizer/minifier
-     - [less](http://lesscss.org/) less parser
-   - [deasync](https://github.com/abbr/deasync) bodge-enabler for doing crazy requirejs shit
  - [jquery](https://jquery.com/) client side dom management
  - [async](https://github.com/caolan/async) async control flow
  - [postcss](https://github.com/postcss/postcss) css processor  
