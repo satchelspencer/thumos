@@ -72,7 +72,7 @@ define({
 			getOne: function(id, callback, uid) {
 				api.get([id], function(e, models) {
 					callback(e, e||models[0]);
-				});
+				}, uid);
 			},
 			update: function(data, callback, uid) {
 				access.write(uid, function(e, accessQuery){

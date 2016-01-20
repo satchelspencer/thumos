@@ -67,6 +67,7 @@ define({
 				else ajax.req('get', api.config.path+'/i/'+inp.ids.join(','), api.util.postprocess(callback));
 			},
 			update : function(models, callback){
+				callback = callback || function(){};
 				propsControl(models, true, function(e, models){
 					if(e) callback(e);
 					else middleware('send', models, function(e, update){
@@ -79,6 +80,7 @@ define({
 				});
 			},
 			del : function(inp, callback){ //del
+				callback = callback || function(){};
 				var inp = parse(inp);
 				if(inp.error) callback(inp.error);
 				else ajax.req('delete', api.config.path+'/i/'+inp.ids.join(','), function(e, deleted){
@@ -96,6 +98,7 @@ define({
 				});
 			},
 			add : function(models, callback){
+				callback = callback || function(){};
 				propsControl(models, false, function(e, models){
 					if(e) callback(e);
 					else middleware('send', models, function(e, toAdd){

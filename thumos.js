@@ -38,12 +38,7 @@ var api = {
 				source : local('bower_components/jQuery/dist/jquery.min.js'),
 				export : '$',
 				minify : true
-			},
-			'jqext' : {
-				source : local('lib/jqext.js'),
-				export : '$.fn.view',
-				deps : ['jquery']
-			},   
+			}, 
 			'underscore' : {
 				source : local('bower_components/underscore/underscore-min.js'),
 				export : '_',
@@ -66,7 +61,7 @@ var api = {
 			var buildPath = path.join(config.path, pageConfig.url);
 			bilt.build({
 				paths : paths,
-				deps : ['view!'+pageConfig.view, 'jquery', 'jqext'],
+				deps : ['view!'+pageConfig.view, 'jquery'],
 				verbose : true,
 				cache : path.join(__dirname, '/tmp/cache.json')
 			}, function(view, $){
