@@ -105,6 +105,8 @@ thumos' authentication is controlled through the global module `auth` with the f
  - `auth.revoke(callback)` revokes authentication, calls back with success status
  - `auth.uid` property, set to authenticated id (id authenticated)
 
+thumos uses a hmac cookie scheme based on the work of [Alex Liu, et al.](http://www.cse.msu.edu/~alexliu/publications/Cookie/cookie.pdf) to verify all requests sent to it.
+
 # API
 
 ## view api
