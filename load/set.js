@@ -36,6 +36,7 @@ define({
 		var middleware = require('middleware')(config);
 		var api = {
 			get : function(inp, callback){
+				callback = callback || function(){};
 				var inp = parse(inp);
 				if(inp.error) callback(inp.error);
 				else{
@@ -58,7 +59,7 @@ define({
 			},
 			getOne : function(id, callback){
 				api.get(id, function(e, models){
-					callback(e, models[0]);
+					callback(e, models&&models[0]);
 				});
 			},
 			load : function(inp, callback){

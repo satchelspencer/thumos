@@ -16,7 +16,7 @@ it does some serious shit™
    
 # Configuration
 
-## thumos.init(options, callback)
+## thumos(options, callback)
 setup a new thumos build given options:
   - `mongo` db info with auth if needed. see [mongo connection strings](http://docs.mongodb.org/manual/reference/connection-string/)
   - `path` **path**: output destination for the build files 
