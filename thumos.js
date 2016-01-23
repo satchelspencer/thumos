@@ -146,23 +146,29 @@ module.exports = function(config, callback){
 			}, function(e, loaded){
 				/* get required sets for routing */
 				_.extend(_.values(loaded)[0], config); //add
+				var deps = _.map(plugins[local('load/set.js')], function(path){
+					var split = path.split('!');
+					return _.map(split, function(part){
+						if(part == local('load/set.js')) part = 'set';
+						return part;
+					}).join('!');
+				});
+				if(config.auth) deps.unshift(config.auth);
 				bilt.require({
 					paths : paths,
-					deps : [config.auth].concat(_.map(plugins[local('load/set.js')], function(path){
-						var split = path.split('!');
-						return _.map(split, function(part){
-							if(part == local('load/set.js')) part = 'set';
-							return part;
-						}).join('!');
-					})),
+					deps : deps,
 					verbose : true
 				}, function(e, loaded){
 					if(e) callback(e);
 					else{
-						/* initialize authentication */
-						authInit(config, _.values(loaded)[0], json);
 						/* setp routes for each set! loaded */
-						async.eachSeries(_.rest(_.values(loaded)), function(set, setReady){
+						var sets = _.values(loaded);
+						/* initialize authentication */
+						if(config.auth){
+							authInit(config, sets[0], json);
+							sets = _.rest(sets);
+						}
+						async.eachSeries(sets, function(set, setReady){
 							var router = express.Router();
 							router.route('/')
 								.get(function(req, res){ //list according to default query

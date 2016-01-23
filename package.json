@@ -27,6 +27,7 @@
     "underscore": "~1.8.3",
     "datauri": "~0.7.1",
     "html-minifier": "~0.8.0",
-    "bilt": "https://github.com/satchelspencer/bilt/tarball/master"
+    "bilt": "https://github.com/satchelspencer/bilt/tarball/master",
+    "sqwish": "~0.2.2"
   }
 }
