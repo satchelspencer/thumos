@@ -28,6 +28,7 @@
     "datauri": "~0.7.1",
     "html-minifier": "~0.8.0",
     "bilt": "https://github.com/satchelspencer/bilt/tarball/master",
-    "sqwish": "~0.2.2"
+    "sqwish": "~0.2.2",
+    "jquery": "~2.2.0"
   }
 }

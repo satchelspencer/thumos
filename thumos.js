@@ -34,17 +34,17 @@ module.exports = function(config, callback){
 		'props' : local('lib/props.js'),
 		'config' : local('lib/config.js'),
 		'jquery' : {
-			source : local('bower_components/jQuery/dist/jquery.min.js'),
+			source : local('node_modules/jquery/dist/jquery.min.js'),
 			export : '$',
 			minify : true
 		}, 
 		'underscore' : {
-			source : local('bower_components/underscore/underscore-min.js'),
+			source : local('node_modules/underscore/underscore-min.js'),
 			export : '_',
 			minify : true
 		},
 		'async' : {
-			source : local('bower_components/async/dist/async.min.js'),
+			source : local('node_modules/async/lib/async.js'),
 			export : 'async',
 			minify : true
 		},
