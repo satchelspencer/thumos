@@ -87,7 +87,7 @@ the available middleware bindings are `valid, send, store, remove`. they are cal
    3. `remove` is called on each model (on the server)
    4. the models are removed from the database
 
-you may also provide typestrings `string`, `number`, `object`, and `bool` as shorthand validators
+you may also provide typestrings `string`, `number`, `object`, and `bool` as shorthand validators. a reference to a set will validate that peoprety represents an object ID accessible by the user
 
 ### access control
 thumos allows custom access control mechanisms defined by the following object:
