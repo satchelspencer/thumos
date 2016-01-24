@@ -58,6 +58,7 @@ sets are a queryable, updateable collection of multiple models. they sync with t
  - `properties` : object of properties, or [validator](#property-validators). properties each may have the following options:
    - `optional` : true if property is not required in model
    - `readonly` : true if client should not be able to modify the property
+   - `plural` : true if property should expect array
    - validation through [set middleware](#set-middleware). key is the middleware name, value is the function.
  - `access` [access module](#access-module) default access controls for entire set
  - `queries` object of set [queries](#queries)
@@ -86,6 +87,8 @@ the available middleware bindings are `valid, send, store, remove`. they are cal
    3. `remove` is called on each model (on the server)
    4. the models are removed from the database
 
+you may also provide typestrings `string`, `number`, `object`, and `bool` as shorthand validators
+
 ### access control
 thumos allows custom access control mechanisms defined by the following object:
  - `read` : query function that is passed the id of the requester, selects models that are eligible to be accessed
@@ -104,8 +107,6 @@ thumos' authentication is controlled through the global module `auth` with the f
  - `auth.get(cred, callback)` pass credentials parameter to server side for validation defined by [`config.auth`](#configuration). calls back with `error, uid`
  - `auth.revoke(callback)` revokes authentication, calls back with success status
  - `auth.uid` property, set to authenticated id (id authenticated)
-
-thumos uses a hmac cookie scheme based on the work of [Alex Liu, et al.](http://www.cse.msu.edu/~alexliu/publications/Cookie/cookie.pdf) to verify all requests sent to it.
 
 # API
 
