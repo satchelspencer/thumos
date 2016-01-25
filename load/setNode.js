@@ -14,18 +14,23 @@ define({
 		config.access = config.access||{};
 		config.access.read = config.access.read||function(i,c){c()};
 		config.access.write = config.access.write||function(i,c){c()}; //always throw error
+		/*  make _id in a query work */
+		function idify(query){
+			if(query._id) query._id = thumosConfig.db.id(query._id);
+			return query;
+		}
 		/* access control is overridden if called by server w/ no id */
 		var access = {
 			read : function(id,c){
 				if(id === undefined) c(null, {}); //when undefined, it is the server calling so let it do whatever the fuck it wants
 				else config.access.read(id, function(e, q){
-					c(e, q||{}); //default to empty query
+					c(e, idify(q)||{}); //default to empty query
 				});
 			},
 			write : function(id,c){
 				if(id === undefined) c(null, {});
 				else config.access.write(id, function(e, q){
-					c(e, q||{});
+					c(e, idify(q)||{});
 				});
 			}
 		};
@@ -212,7 +217,7 @@ define({
 					if(e) callback({permission:e});
 					else collection.find({
 						$and : [
-							config.queries[query](params),
+							idify(config.queries[query](params)),
 							accessQuery
 						]	
 					}, function(e, raw) {
