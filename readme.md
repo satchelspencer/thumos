@@ -29,7 +29,7 @@ setup a new thumos build given options:
   - `route` : base route for thumos (defaults to '/')
   - `auth` : authentication function used by the [authentication module](#authentication). called with params:
     - `cred` arbitrary credentials parameter, passed from `auth.get`
-    - `callback` callback on completeion with `error, uid` 
+    - `callback` callback on completeion with `error, uid, [userdata]` user data will be passed as the `data` property in access query/middleware context. 
   
 
 ## creating views
@@ -71,7 +71,9 @@ sets are a queryable, updateable collection of multiple models. they sync with t
 set middleware are functions that are passed a model at various stages in thumos. middleware functions always have 3 parameters:
  - `input` the value of a model's property (or the entire model)
  - `callback` a function with 2 arguments `error` and `value`. error will stop the current function and if supplied, value will replace the `input` to the middleware
- - `uid` the unique identifier for of the acting party. derived from thumos' [authentication](#authentication)
+ - `context` the unique identifier for of the acting party. derived from thumos' [authentication](#authentication) contains the properties:
+   - `uid` user's unique id
+   - `data` any data saved by the authentication module
 the available middleware bindings are `valid, send, store, remove`. they are called in the following order:
  - `add/update`
    1. client calls `set.add` or `set.update`

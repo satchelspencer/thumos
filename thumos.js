@@ -172,32 +172,32 @@ module.exports = function(config, callback){
 							var router = express.Router();
 							router.route('/')
 								.get(function(req, res){ //list according to default query
-									set.find({}, handle(res), req.id||0);
+									set.find({}, handle(res), req.context);
 								})
 								.post(json, function(req, res){
 									//add new model(s) to set, return models
-									set.add(req.body, handle(res), req.id||0);
+									set.add(req.body, handle(res), req.context);
 								})
 								.put(json, function(req, res){
 									//update existing models, return models
-									set.update(req.body, handle(res), req.id||0);
+									set.update(req.body, handle(res), req.context);
 								});
 							router.route('/i/:ids')
 								.get(function(req, res){ //get models by id
-									set.get(req.params.ids.split(','), handle(res), req.id||0);
+									set.get(req.params.ids.split(','), handle(res), req.context);
 								})
 								.delete(function(req, res){ //delete models by id
-									set.del(req.params.ids.split(','), handle(res), req.id||0);
+									set.del(req.params.ids.split(','), handle(res), req.context);
 								});
 							router.route('/q/:queryname').post(json, function(req, res){
-								set.query(req.params.queryname, req.body, handle(res), req.id||0);
+								set.query(req.params.queryname, req.body, handle(res), req.context);
 							});
 							/* find and search simply passit to their server side counterparts */
 							router.route('/find').post(json, function(req, res){
-								set.find(req.body, handle(res), req.id||0);
+								set.find(req.body, handle(res), req.context);
 							});
 							router.route('/search').post(json, function(req, res){
-								set.search(req.body, handle(res), req.id||0);
+								set.search(req.body, handle(res), req.context);
 							});
 
 							/* custom routes setup */

@@ -38,8 +38,8 @@ define({
 		var collection = thumosConfig.db.collection(config.collection || config.name);
 		var middleware = require('middleware')(config);
 		var api = {
-			get: function(ids, callback, uid) {
-				access.read(uid, function(e, accessQuery){
+			get: function(ids, callback, context) {
+				access.read(context, function(e, accessQuery){
 					if(e) callback({permission:e});
 					else{
 						/* get all ids */
@@ -69,13 +69,13 @@ define({
 					}
 				})
 			},
-			getOne: function(id, callback, uid) {
+			getOne: function(id, callback, context) {
 				api.get([id], function(e, models) {
 					callback(e, e||models[0]);
-				}, uid);
+				}, context);
 			},
-			update: function(data, callback, uid) {
-				access.write(uid, function(e, accessQuery){
+			update: function(data, callback, context) {
+				access.write(context, function(e, accessQuery){
 					if(e) callback({permission:e});
 					else propsControl(data, true, function(e, models){ 
 						if (e) callback(e);
@@ -102,18 +102,18 @@ define({
 											if(!result.n) cb({updateerr: model._id});
 											else middleware('remove', overwritten, function(e){
 												cb(e, _.extend(oldModel, newModel));
-											}, uid);
+											}, context);
 										});
-									}, uid); 
+									}, context); 
 								});
 							}, callback);
-						}, uid);
+						}, context);
 					});
 				})
 			},
-			del: function(ids, callback, uid) {
+			del: function(ids, callback, context) {
 				if (!_.isArray(ids)) ids = [ids]; //force to array
-				access.write(uid, function(e, accessQuery){
+				access.write(context, function(e, accessQuery){
 					var removed = []
 					if(e) callback({permission:e});
 					else async.eachSeries(ids, function(id, cb) {
@@ -132,18 +132,18 @@ define({
 									if(e || !res.n) cb(e || 'failed to remove '+id); //add to the failed if res.n == 0 and was not removed
 									else{
 										removed.push(id);
-										middleware('remove', model, cb, uid);
+										middleware('remove', model, cb, context);
 									}
 								});
-							}, uid); 
+							}, context); 
 						});
 					}, function(e) {
 						callback(e, removed);
 					});
 				})
 			},
-			add: function(models, callback, uid) {
-				access.write(uid, function(e, accessQuery){
+			add: function(models, callback, context) {
+				access.write(context, function(e, accessQuery){
 					if(e) callback({permission:e});
 					else propsControl(models, false, function(e, models){ 
 						if(e) callback(e);
@@ -154,14 +154,14 @@ define({
 								else middleware('init', models, function(e, models){
 									if(e) callback(e);
 									else collection.insert(models, callback);
-								}, uid);
-							}, uid); 
-						}, uid);
+								}, context);
+							}, context); 
+						}, context);
 					});
 				});
 			},
-			find: function(props, callback, uid) {
-				access.read(uid, function(e, accessQuery){
+			find: function(props, callback, context) {
+				access.read(context, function(e, accessQuery){
 					if(e) callback({permission:e});
 					else{
 						var query = {};
@@ -183,13 +183,13 @@ define({
 					}
 				});
 			},
-			findOne: function(props, callback, uid) {
+			findOne: function(props, callback, context) {
 				api.find(props, function(e, models) {
 					callback(e, models?models[0]:null);
-				}, uid);
+				}, context);
 			},
-			search: function(props, callback, uid) {
-				access.read(uid, function(e, accessQuery){
+			search: function(props, callback, context) {
+				access.read(context, function(e, accessQuery){
 					if(e) callback({permission:e});
 					else{
 						var query = _.mapObject(props, function(propVal, propName) {
@@ -206,9 +206,9 @@ define({
 					}
 				});
 			},
-			query: function(query, params, callback, uid) {
+			query: function(query, params, callback, context) {
 				if (!config.queries[query]) callback('query: ' + query + ' does not exist');
-				else access.read(uid, function(e, accessQuery){
+				else access.read(context, function(e, accessQuery){
 					if(e) callback({permission:e});
 					else collection.find({
 						$and : [
