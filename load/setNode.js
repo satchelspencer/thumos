@@ -16,7 +16,7 @@ define({
 		config.access.write = config.access.write||function(i,c){c()}; //always throw error
 		/*  make _id in a query work */
 		function idify(query){
-			if(query._id) query._id = thumosConfig.db.id(query._id);
+			if(query && query._id) query._id = thumosConfig.db.id(query._id);
 			return query;
 		}
 		/* access control is overridden if called by server w/ no id */
