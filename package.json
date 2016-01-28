@@ -27,6 +27,7 @@
     "bilt": "https://github.com/satchelspencer/bilt/tarball/master",
     "sqwish": "~0.2.2",
     "jquery": "~2.2.0",
-    "memcached": "~2.2.1"
+    "memcached": "~2.2.1",
+    "get-installed-path": "~1.0.2"
   }
 }

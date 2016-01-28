@@ -10,6 +10,7 @@ var authInit = require('./lib/authinit');
 var path = require('path');
 var _ = require('underscore');
 var d = require('datauri');
+var getPath = require('get-installed-path');
 
 function local(fpath){
 	return path.join(__dirname, fpath);
@@ -34,17 +35,17 @@ module.exports = function(config, callback){
 		'props' : local('lib/props.js'),
 		'config' : local('lib/config.js'),
 		'jquery' : {
-			source : local('node_modules/jquery/dist/jquery.min.js'),
+			source : path.join(getPath('jquery', true), 'dist/jquery.min.js'),
 			export : '$',
 			minify : true
 		}, 
 		'underscore' : {
-			source : local('node_modules/underscore/underscore-min.js'),
+			source : path.join(getPath('underscore', true), 'underscore-min.js'),
 			export : '_',
 			minify : true
 		},
 		'async' : {
-			source : local('node_modules/async/lib/async.js'),
+			source : path.join(getPath('async', true), 'lib/async.js'),
 			export : 'async',
 			minify : true
 		},
