@@ -16,9 +16,8 @@ function local(fpath){
 	return path.join(__dirname, fpath);
 }
 
-function modulePath(path){
-	console.log(path);
-	return getPath(path, true)||path.join('node_modules', path);
+function modulePath(p){
+	return getPath(p, true)||path.join('node_modules', p);
 }
 
 module.exports = function(config, callback){
