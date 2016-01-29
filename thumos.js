@@ -16,7 +16,13 @@ function local(fpath){
 	return path.join(__dirname, fpath);
 }
 
+function modulePath(path){
+	console.log(path);
+	return getPath(path, true)||path.join('node_modules', path);
+}
+
 module.exports = function(config, callback){
+	console.log(getPath('jquery'));
 	var paths = {
 		'datauri' : local('load/datauri.js'),
 		'css' : local('load/css.js'),
@@ -35,17 +41,17 @@ module.exports = function(config, callback){
 		'props' : local('lib/props.js'),
 		'config' : local('lib/config.js'),
 		'jquery' : {
-			source : path.join(getPath('jquery', true), 'dist/jquery.min.js'),
+			source : path.join(modulePath('jquery'), 'dist/jquery.min.js'),
 			export : '$',
 			minify : true
 		}, 
 		'underscore' : {
-			source : path.join(getPath('underscore', true), 'underscore-min.js'),
+			source : path.join(modulePath('underscore'), 'underscore-min.js'),
 			export : '_',
 			minify : true
 		},
 		'async' : {
-			source : path.join(getPath('async', true), 'lib/async.js'),
+			source : path.join(modulePath('async'), 'lib/async.js'),
 			export : 'async',
 			minify : true
 		},
