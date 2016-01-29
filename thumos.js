@@ -17,11 +17,10 @@ function local(fpath){
 }
 
 function modulePath(p){
-	return getPath(p, true)||path.join('node_modules', p);
+	return getPath(p, true)|| local(path.join('node_modules', p));
 }
 
 module.exports = function(config, callback){
-	console.log(getPath('jquery'));
 	var paths = {
 		'datauri' : local('load/datauri.js'),
 		'css' : local('load/css.js'),
