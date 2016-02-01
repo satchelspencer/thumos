@@ -19,7 +19,6 @@
     "crc-32": "~0.3.0",
     "parent-require": "~1.0.0",
     "fs-extra": "~0.22.1",
-    "aws-sdk": "~2.1.45",
     "skipper": "~0.5.5",
     "underscore": "~1.8.3",
     "datauri": "~0.7.1",
