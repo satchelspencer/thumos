@@ -17,7 +17,7 @@ function local(fpath){
 }
 
 function modulePath(p){
-	return getPath(p, true)|| local(path.join('node_modules', p));
+	return require.resolve(p);
 }
 
 module.exports = function(config, callback){
@@ -39,17 +39,17 @@ module.exports = function(config, callback){
 		'props' : local('lib/props.js'),
 		'config' : local('lib/config.js'),
 		'jquery' : {
-			source : path.join(modulePath('jquery'), 'dist/jquery.min.js'),
+			source : modulePath('jquery'),
 			export : '$',
 			minify : true
 		}, 
 		'underscore' : {
-			source : path.join(modulePath('underscore'), 'underscore-min.js'),
+			source : modulePath('underscore'),
 			export : '_',
 			minify : true
 		},
 		'async' : {
-			source : path.join(modulePath('async'), 'lib/async.js'),
+			source : modulePath('async'),
 			export : 'async',
 			minify : true
 		},
