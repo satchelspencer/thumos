@@ -35,6 +35,10 @@ define({
 			}
 		};
 
+		var propsQuery = _.mapObject(config.properties, function(val){
+			return 1;
+		});
+
 		config.properties = _.mapObject(config.properties, function(value, property){
 			if(!value.valid) return {valid : value};
 			else return value;
@@ -60,7 +64,7 @@ define({
 								}},
 								accessQuery
 							]
-						}, function(e, models) {
+						}, propsQuery, function(e, models) {
 							if (e) callback(e);
 							else {
 								/* check to see that we found all the models */
@@ -93,7 +97,7 @@ define({
 										{_id: model._id},
 										accessQuery
 									]
-								}, function(e, oldModel) { //get its current value
+								}, propsQuery, function(e, oldModel) { //get its current value
 									var overwritten = _.pick(oldModel, _.keys(model));
 									if(e || !oldModel) cb(e || {noexist: model._id});
 									else middleware('store', model, function(e, newModel){
@@ -127,7 +131,7 @@ define({
 								{_id: thumosConfig.db.id(id)},
 								accessQuery
 							]
-						}, function(e, model){
+						}, propsQuery, function(e, model){
 							if(e || !model) cb(e||id+' does not exist');
 							else middleware('remove', model, function(e){
 								if(e) cb(e);
@@ -182,7 +186,7 @@ define({
 								query,
 								accessQuery
 							]
-						}, function(e, raw) {
+						}, propsQuery, function(e, raw) {
 							callback(e, raw);
 						});
 					}
@@ -205,7 +209,7 @@ define({
 								query,
 								accessQuery
 							]
-						}, function(e, raw) {
+						}, propsQuery, function(e, raw) {
 							callback(e, raw);
 						});
 					}
@@ -220,7 +224,7 @@ define({
 							idify(config.queries[query](params)),
 							accessQuery
 						]	
-					}, function(e, raw) {
+					}, propsQuery, function(e, raw) {
 						callback(e, raw);
 					});
 				});
