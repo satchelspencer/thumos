@@ -62,6 +62,7 @@ module.exports = function(config, callback){
 	paths = _.extend(paths, config.paths||{});
 
 	config.tempdir = config.tempdir || path.join(__dirname, '/tmp');
+	fs.ensureDirSync(config.tempdir);
 
 	async.reduce(config.pages, [], function(allLoaded, pageConfig, pageComplete){
 		var buildPath = path.join(config.path, pageConfig.url);
