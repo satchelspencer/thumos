@@ -133,7 +133,7 @@ define({
 							]
 						}, propsQuery, function(e, model){
 							if(e || !model) cb(e||id+' does not exist');
-							else middleware('remove', model, function(e){
+							else middleware('unlink', model, function(e){
 								if(e) cb(e);
 								else collection.remove({
 									_id: thumosConfig.db.id(id)
@@ -169,21 +169,13 @@ define({
 					});
 				});
 			},
-			find: function(props, callback, context) {
+			find: function(query, callback, context) {
 				access.read(context, function(e, accessQuery){
 					if(e) callback({permission:e});
 					else{
-						var query = {};
-						/* make sure the only thing we gettin is actual props */
-						for (var prop in props){
-							if(prop == '_id') props[prop] = thumosConfig.db.id(props[prop]);
-							query[prop] = {
-								$eq: props[prop]
-							};
-						}
 						collection.find({
 							$and : [
-								query,
+								idify(query),
 								accessQuery
 							]
 						}, propsQuery, function(e, raw) {
@@ -213,20 +205,6 @@ define({
 							callback(e, raw);
 						});
 					}
-				});
-			},
-			query: function(query, params, callback, context) {
-				if (!config.queries[query]) callback('query: ' + query + ' does not exist');
-				else access.read(context, function(e, accessQuery){
-					if(e) callback({permission:e});
-					else collection.find({
-						$and : [
-							idify(config.queries[query](params)),
-							accessQuery
-						]	
-					}, propsQuery, function(e, raw) {
-						callback(e, raw);
-					});
 				});
 			},
 			config: config

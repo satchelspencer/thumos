@@ -122,12 +122,6 @@ define({
 			search : function(props, callback){
 				ajax.req('post', api.config.path+'/search', props, api.util.postprocess(callback));
 			},
-			query : function(query, params, callback){
-				ajax.req('post', api.config.path+'/q/'+query, params, function(e, models){
-					if(e) callback(e);
-					else api.decode(models, api.util.postprocess(callback));
-				});
-			},
 			group : function(input){
 				var events = {};
 				var props = {};

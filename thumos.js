@@ -197,9 +197,6 @@ module.exports = function(config, callback){
 								.delete(function(req, res){ //delete models by id
 									set.del(req.params.ids.split(','), handle(res), req.context);
 								});
-							router.route('/q/:queryname').post(json, function(req, res){
-								set.query(req.params.queryname, req.body, handle(res), req.context);
-							});
 							/* find and search simply passit to their server side counterparts */
 							router.route('/find').post(json, function(req, res){
 								set.find(req.body, handle(res), req.context);
