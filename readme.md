@@ -152,6 +152,7 @@ requireing a view with `view!` gives you a constructor whose arguments will be p
  - `set!` includes a set definition, handles server side setup and gives you [`set api`](#set-api)
  - `text!` includes a file as a utf-8 string
  - `view!` includes a view definition, provides [`view api`](#view-api)
+ - `browserify!` includes a file and its dependencies using [browserify](http://browserify.org/)!
 
 # Included Dependencies
  - [express](http://expressjs.com/) server side routing goodness
