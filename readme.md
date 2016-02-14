@@ -10,7 +10,8 @@ it does some serious shit™
  - [`api`](#api)
    - [`views`](#view-api)
    - [`sets`](#set-api)
-   - [`groups`](#group-api)
+     - [`groups`](#group-api)
+     - [`subsets`](#subset-api)
  - [`loaders`](#included-loaders)
  - [`dependencies`](#included-dependencies)
    
@@ -108,6 +109,7 @@ minAge : function(age){
 thumos' authentication is controlled through the global module `auth` with the following api:
  - `auth.get(cred, callback)` pass credentials parameter to server side for validation defined by [`config.auth`](#configuration). calls back with `error, uid`
  - `auth.revoke(callback)` revokes authentication, calls back with success status
+ - `auth.bind(callback)` add callback to authentication events, calls back with uid or null
  - `auth.uid` property, set to authenticated id (id authenticated)
 
 # API
@@ -116,33 +118,67 @@ thumos' authentication is controlled through the global module `auth` with the f
 requireing a view with `view!` gives you a constructor whose arguments will be passed to the view's `init`. the constructor returns the dom of the view.
 
 ## set api
-- `set.get(ids, callback)` retrieves models by id, calls back with [resultset](#resultset-api)
+- `set.get(ids, callback)` retrieves models by id, calls back with array of models
 - `set.getOne(id, callback)` retrieves model by id, calls back single model
-- `set.update(data, callback)` updates set, returns changed models
-- `set.del(ids, callback)` removes models by id, returns list of removed ids
-- `set.add(data, callback)` adds array of model data, calls back with added [resultset](#resultset-api)
-- `set.find(props, callback)` returns resultset of models where properties are equal to parameter `props`
-- `set.findOne(props, callback)` returns a single model
-- `set.query(query, params, callback)` query a set, callback with [resultset](#resultset-api)
-- `set.group(input)` follow a subset of models in a set determined by input (models or predicate function to filter availiable models in the set). one initialized it returns a [group object](#group-api)
+- `set.update(data, callback)` updates set, returns array of changed models
+- `set.remove(ids, callback)` removes models by id, returns list of removed ids
+- `set.insert(data, callback)` adds array of model data, calls back with added array of models
+- `set.find(query, callback)` gets array of models who match query
+- `set.findOne(query, callback)` gets first model that matches query
+
+*browser only methods*
+
+- `set.load(ids, callback)` *ignores cache* and retrieves models from server
+- `set.group(options_or_query)` creates a [group object](#group-api) for all models matching provided `query` or options:
+  - `query` query object to define group
+  - `include : function(model, callback)` **optional** function to modify model to be included in group
+  - `exclude : function(model, callback)` **optional** function to modify model to be excluded from group
+- `set.subset(ids)` creates a [subset object](#subset-api) for the models in `ids`
   
 ## group api
-  - `group.on(event, callback)` add a listener for one of the following events:
-    - `add` when a new model enters the group
+ - `group.get(ids, callback)` same as `set.get` but models must be in group
+ - `group.getOne(id, callback)` get a single model in the group
+ - `group.load(ids, callback)` load models in group from server
+ - `group.find(query, callback)` query for models in group
+ - `group.findOne(query, callback)` calls back with first model in group that matches query
+ - `group.insert(models, callback)` *include function required* inserts models, and makes sure they are included in group
+ - `group.update(models, callback)` same as `set.update` but models must be in group. update *can* exclude models from group
+ - `group.include(models, callback)` *include function required* updates provided models to ensure they are in group.
+ - `group.exclude(models, callback)` *exclude function required* updates provided models to ensure they are no longer in group.
+ - `group.group(options)` creates a subgroup (with group api) that conforms to current group and its own querys. subgroups:
+   - only contain models that are in their parent groups
+   - include (or insert) includes the model in subgroup and *all* parent groups
+   - exclude from group *does not* exclude it from any parent or subgroups (for now)
+   - removal from a parent group implies removal from all subgroups
+ - `group.bind(options)` updates group `query, include and exclude` using the same constructor and retriggering events as needed
+ - `group.order(predicate, reverse)` set the ordering function of the set. predicate may be a function that takes in a model and returs the value to be sorted from, or a string naming the property to be sorted on. reverse (optional) reverses the sort order. Calls to `include` and `update` events have a second parameter (the index in the sorted order)
+ - `group.on(event, callback)` add a listener for one of the following events:
+    - `include` when a new model enters the group
+    - `exclude` when a model leaves the group calls back with **ID only**
     - `update` when a model in the group changes value
-    - `del` when a model leaves the group calls back with **ID only**
-  - `group.off(event)` disable callback for event
-  - `group.prop(propName, callback)` add a listener for changed properties within the group. calls back with paremeters `callback(propValue, whichModel)` where propValue is the value, and whichModel is the id of the model in question
-  - `group.models(callback)` attach a listener to add del and update, calls back with entire group
-  - `group.bind(input)` update which models should now be tracked by the group, retiggers events as needed. `input` is a model, array of models or a testing function
-  - `group.order(predicate, reverse)` set the ordering function of the set. predicate may be a function that takes in a model and returs the value to be sorted from, or a string naming the property to be sorted on. reverse (optional) reverses the sort order. Calls to add/update events have a second parameter (the index in the sorted order)
-  - [`underscore funtions`](http://underscorejs.org/#collections) (collection functions only) proxy to their underscore equivalents. a call to one of these functions returns a function to which you may pass a callback to catch the return value of the underscore function (if any). see example:
+    - `change` calls back with full list of models on any change
+ - `group.off(event)` disable callbacks for event
+ - [`underscore funtions`](http://underscorejs.org/#collections) (collection functions excluding `find` only) proxy to their underscore equivalents. a call to one of these functions returns a function to which you may pass a callback to catch the return value of the underscore function (if any). see example:
     
     ~~~ Javascript
    mygroup.pluck('name')(function(names){
       console.log(names)
    });
     ~~~
+
+## subset api
+ - `subset.bind(ids)` updates subset to be equal to the provided ids
+ - `subset.include(ids, callback)` adds models to subset
+ - `subset.exclude(ids, callback)` removes models from subset
+ - `subset.insert(models, callback)` inserts models into set then appends them to the subset
+ - `subset.on(event, callback)` add a listener for one of the following events:
+    - `include` when a new model enters the subset
+    - `exclude` when a model leaves the subset calls back with **ID only**
+    - `update` when a model in the subset changes value
+    - `change` calls back with full list of models in subset
+ - `subset.off(event)` disable callbacks for event
+ - `subset.prop(propName, callback)` add a listener for changed properties within the group. calls back with paremeters `callback(propValue, whichModel)` where propValue is the value, and whichModel is the id of the model in question
+ - same underscore functions as a group
 
 # Included Loaders
  - `css!` client side only: parses with [less](http://lesscss.org/), minifies and appends css to page
@@ -155,17 +191,28 @@ requireing a view with `view!` gives you a constructor whose arguments will be p
  - `browserify!` includes a file and its dependencies using [browserify](http://browserify.org/)!
 
 # Included Dependencies
+ - [async](https://github.com/caolan/async) async control flow
+ - [autoprefixer](https://github.com/postcss/autoprefixer) handles browser prefixes at build time
+ - [bcrypt](https://github.com/ncb000gt/node.bcrypt.js) password hash
+ - [bilt](https://github.com/satchelspencer/bilt) module loader
+ - [browserify](http://browserify.org/) commonjs module loader bult tool
+ - [cheerio](https://github.com/cheeriojs/cheerio) server side dom management
+ - [crc-32](https://github.com/SheetJS/js-crc32) crc32 checksumming for detecting when to fire `change` events
+ - [csso](https://github.com/css/csso) css optimizer
+ - [datauri](https://github.com/heldr/datauri) get data uri from file
+ - [derequire](https://www.npmjs.com/package/derequire) sanitize require calls
  - [express](http://expressjs.com/) server side routing goodness
    - [cookie-parser](https://github.com/expressjs/cookie-parser)
    - [body-parser](https://github.com/expressjs/body-parser)
+ - [fs-extra](https://github.com/jprichardson/node-fs-extra) extended node file library
+ - [get-installed-path](https://github.com/tunnckoCore/get-installed-path) finds path of npm package
+ - [html-minifier](https://github.com/kangax/html-minifier) self-explanatory
+ - [jquery](http://lmgtfy.com/?q=what+is+jquery)
+ - [less](http://lesscss.org/) css extention
+ - [memcached](https://github.com/3rd-Eden/memcached) memcached for node
+ - [mongo-parse](https://github.com/fresheneesz/mongo-parse) test mongodb querys in javascript
  - [mongojs](https://github.com/mafintosh/mongojs) mongo api in node
- - [jquery](https://jquery.com/) client side dom management
- - [async](https://github.com/caolan/async) async control flow
- - [postcss](https://github.com/postcss/postcss) css processor  
- - [autoprefixer](https://github.com/postcss/autoprefixer) handles browser prefixes at build time
- - [rimraf](https://github.com/isaacs/rimraf) rm -rf
- - [cheerio](https://github.com/cheeriojs/cheerio) server side dom management
- - [node-memcached](https://github.com/3rd-Eden/memcached) memcached for node
- - [bcrypt](https://github.com/ncb000gt/node.bcrypt.js) password hash
- - [crc-32](https://github.com/SheetJS/js-crc32) crc32 checksumming for detecting when to fire `change` events
- - [datauri](https://github.com/heldr/datauri) get data uri from file
+ - [postcss](https://github.com/postcss/postcss) css processor
+ - [sqwish](https://www.npmjs.com/package/sqwish) css compressor
+ - [through](https://github.com/dominictarr/through) transformation streams
+ - [underscore](http://underscorejs.org/) functional javascript shit

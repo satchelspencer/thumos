@@ -14,9 +14,17 @@ define({
 		config.access = config.access||{};
 		config.access.read = config.access.read||function(i,c){c()};
 		config.access.write = config.access.write||function(i,c){c()}; //always throw error
-		/*  make _id in a query work */
+		/*  make _id in a query work:
+		see: https://github.com/Automattic/monk/blob/2821708862d8dba0303a78095ebbb90f1fef5b2b/lib/collection.js#L548 */
+		var id = thumosConfig.db.id;
 		function idify(query){
-			if(query && query._id) query._id = thumosConfig.db.id(query._id);
+			query = query||{};
+			if(query._id) query._id = id(query._id);
+			if(query.$set && query.$set._id) query.$set._id = id(query.$set._id);
+			if(query.$not && query.$not._id) query.$not._id = id(query.$not._id);
+			if(query.$and && _.isArray(query.$and)) query.$and = _.map(query.$and, idify);
+			if(query.$or && _.isArray(query.$or)) query.$or = _.map(query.$or, idify);
+			if(query.$nor && _.isArray(query.$nor)) query.$nor = _.map(query.$nor, idify);
 			return query;
 		}
 		/* access control is overridden if called by server w/ no id */
@@ -120,7 +128,7 @@ define({
 					});
 				})
 			},
-			del: function(ids, callback, context) {
+			remove: function(ids, callback, context) {
 				if (!_.isArray(ids)) ids = [ids]; //force to array
 				access.write(context, function(e, accessQuery){
 					var removed = []
@@ -151,7 +159,7 @@ define({
 					});
 				})
 			},
-			add: function(models, callback, context) {
+			insert: function(models, callback, context) {
 				access.write(context, function(e, accessQuery){
 					if(e) callback({permission:e});
 					else propsControl(models, false, function(e, models){ 
@@ -188,24 +196,6 @@ define({
 				api.find(props, function(e, models) {
 					callback(e, models?models[0]:null);
 				}, context);
-			},
-			search: function(props, callback, context) {
-				access.read(context, function(e, accessQuery){
-					if(e) callback({permission:e});
-					else{
-						var query = _.mapObject(props, function(propVal, propName) {
-							return new RegExp(propVal.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&"), "i");
-						});
-						collection.find({
-							$and : [
-								query,
-								accessQuery
-							]
-						}, propsQuery, function(e, raw) {
-							callback(e, raw);
-						});
-					}
-				});
 			},
 			config: config
 		};

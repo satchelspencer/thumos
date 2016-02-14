@@ -6,7 +6,14 @@ define({
 		var async = require('async');
 		var crc32 = require('crc32');
 		var propsControl = require('props')(config);
-		
+		var mongo = require('browserify!mongo-parse');
+
+		var api;
+		var setmodels = {};
+		var groups = [];
+		var subsets = {};
+		var checksums = {};
+
 		/* take in an (array or singleton) of (ids or models w/ids) */
 		function parse(idmdls){
 			if(!_.isArray(idmdls)) idmdls = [idmdls]; //force to array
@@ -14,17 +21,75 @@ define({
 			var invalids = _.reject(ids, function(id){
 				return id.match(/^[0-9a-f]{24}$/); //must fit mongo format
 			});
-			if(!ids.length) return {error : 'noids'}
+			idmdls = _.compact(_.map(idmdls, function(i){
+				if(typeof i == 'string') i = setmodels[i];
+				return i;
+			}))
+			if(!ids.length) return {error : 'noids'};
 			if(invalids.length) return {error : {invalid : invalids}};
 			else return {
 				ids : ids,
 				models : idmdls
 			};
 		}
-		/* checksum a model */
-		function checksum(model){
-			return crc32.str(JSON.stringify(model));
+		/* given models return the changed ones */
+		function getChanged(inp){
+			var inp = parse(inp);
+			if(inp.error) return [];
+			return _.filter(inp.models, function(model){
+				var existing = checksums[model._id]; //previous
+				var current = crc32.str(JSON.stringify(model)); //new
+				if(!existing || existing != current){
+					checksums[model._id] = current; //update if model doesnt exist or is different
+					return true;
+				}else return false;
+			});
 		}
+
+		/* response handler */
+		function response(callback){
+			callback = callback||function(){};
+			return function(e, models){
+				if(e) callback(e);
+				else{
+					var diff = getChanged(models); //incudes new
+					_.each(diff, function(model){
+						_.each(groups, function(group){
+							group.util.catch(model);
+						});
+						if(subsets[model._id]) _.each(subsets[model._id], function(subset){
+							subset.util.catch(model);
+						});
+						setmodels[model._id] = model;
+					});
+					callback(e, models);
+				}						
+			}
+		}
+
+		/* extend group or subset with underscore methods */
+		function addUnderscore(object){
+			var underscoreMethods = ['each', 'map', 'reduce', 'reduceRight', 'filter', 'where', 'findWhere', 'reject', 'every', 'some', 'contains', 'invoke', 'pluck', 'max', 'min', 'sortBy', 'groupBy', 'indexBy', 'countBy', 'shuffle', 'sample', 'toArray', 'size', 'partition'];
+			_.each(underscoreMethods, function(methodName){
+				object[methodName] = function(){
+					var args = arguments;
+					var done;
+					var lastval;
+					function complete(callback){ //will be called with the output from the underscore method onchange
+						done = callback;
+						if(lastval) callback(lastval);
+					}
+					object.on('change', function(models){
+						var topass = Array.prototype.slice.call(args, 0);
+						topass.unshift(models);
+						var val = _[methodName].apply(this, topass);
+						if(done) done(val);
+						else lastval = val;
+					});
+					return complete; 
+				}
+			});
+		} 
 
 		config.properties = _.mapObject(config.properties, function(value, property){
 			if(!value.valid) return {valid : value};
@@ -34,7 +99,9 @@ define({
 		/* get, del, add and queryies all just go to server */
 		config.path = config.path||'/'+config.name;
 		var middleware = require('middleware')(config);
-		var api = {
+
+		/* public api */
+		api = {
 			get : function(inp, callback){
 				callback = callback || function(){};
 				var inp = parse(inp);
@@ -42,14 +109,14 @@ define({
 				else{
 					var remote = [];
 					var models = _.map(inp.ids, function(id){
-						if(!api.models[id]) remote.push(id);
-						return api.models[id]||id; //leave id in place if not found
+						if(!setmodels[id]) remote.push(id);
+						return setmodels[id]||id; //leave id in place if not found
 					});
 					if(remote.length) api.load(remote, function(e, remote){
 						if(e) callback(e);
 						else{
 							_.each(remote, function(model){
-								models[models.indexOf(model._id)] = model;
+								models[models.indexOf(model._id)] = model; //replace that id with fetched model
 							});
 							if(callback) callback(null, models);
 						}
@@ -65,81 +132,372 @@ define({
 			load : function(inp, callback){
 				var inp = parse(inp);
 				if(inp.error) callback(inp.error);
-				else ajax.req('get', api.config.path+'/i/'+inp.ids.join(','), api.util.postprocess(callback));
+				else ajax.req('get', config.path+'/i/'+inp.ids.join(','), response(callback));
 			},
+			find : function(query, callback){
+				ajax.req('post', config.path+'/find', query, response(callback));
+			},
+			findOne : function(props, callback){
+				api.find(props, function(e, models){
+					callback(e, models&&models[0]);
+				});
+			},
+			insert : function(models, callback){
+				callback = callback || function(){};
+				propsControl(models, false, function(e, models){
+					if(e) callback(e);
+					else middleware('send valid', models, function(e, toAdd){
+						if(e) callback(e);
+						else ajax.req('post', config.path, toAdd, response(callback));
+					});
+				});
+			}, 
 			update : function(models, callback){
 				callback = callback || function(){};
 				propsControl(models, true, function(e, models){
 					if(e) callback(e);
-					else middleware('send', models, function(e, update){
+					else middleware('send valid', models, function(e, update){
 						if(e) callback(e);
-						else middleware('valid', update, function(e, update){
-							if(e) callback(e);
-							else ajax.req('put', api.config.path, update, api.util.postprocess(callback));
-						})
+						else ajax.req('put', config.path, update, response(callback));
 					});
 				});
 			},
-			del : function(inp, callback){ //del
+			remove : function(inp, callback){ //del
 				callback = callback || function(){};
-				var inp = parse(inp);
+				var inp = parse(inp); //parse model ids
 				if(inp.error) callback(inp.error);
-				else ajax.req('delete', api.config.path+'/i/'+inp.ids.join(','), function(e, deleted){
+				else ajax.req('delete', config.path+'/i/'+inp.ids.join(','), function(e, deleted){
 					_.each(deleted, function(modelId){
-						_.each(api.groups, function(group){
-							if(group.util.models[modelId]){
-								group.util.order = _.without(group.util.order, modelId);
-								delete group.util.models[modelId];
-								group.util.trigger('del', modelId);
-								group.util.trigger('models', _.values(group.util.models));
-							}
+						_.each(groups, function(group){
+							if(group.util.models[modelId]) group.util.purge(modelId);
 						});
+						if(subsets[modelId]) _.each(subsets[modelId], function(subset){
+							subset.exclude(modelId);
+						});
+						delete setmodels[modelId];
 					});
 					if(callback) callback(e, deleted);
 				});
 			},
-			add : function(models, callback){
-				callback = callback || function(){};
-				propsControl(models, false, function(e, models){
-					if(e) callback(e);
-					else middleware('send', models, function(e, toAdd){
-						if(e) callback(e);
-						else middleware('valid', toAdd, function(e, toAdd){
-							if(e) callback(e);
-							else ajax.req('post', api.config.path, toAdd, api.util.postprocess(callback));
-						})
-					});
-				});
-			},
-			find : function(props, callback){ //decode
-				ajax.req('post', api.config.path+'/find', props, api.util.postprocess(callback));
-			}, 
-			findOne : function(props, callback){
-				api.find(props, function(e, models){
-					callback(e, models[0]);
-				});
-			},
-			search : function(props, callback){
-				ajax.req('post', api.config.path+'/search', props, api.util.postprocess(callback));
-			},
-			group : function(input){
+			group : function(inp, parentGroup){
 				var events = {};
-				var props = {};
 				var order = function(){return 0;};
 				var reverse = false;
+
 				var group = {
+					get : function(){
+						callback = callback || function(){};
+						var inp = parse(inp);
+						if(inp.error) callback(inp.error);
+						else{
+							var remote = [];
+							var invalids = []; //cached, but not in group
+							var models = _.map(inp.ids, function(id){
+								if(!group.util.models[id]){
+									if(models[id]) invalids.push(id);
+									else remote.push(id);
+								}
+								return setmodels[id]||id; //leave id in place if not found
+							});
+							if(invalids.length) callback('not in group'+invalids);
+							else if(remote.length) group.load(remote, function(e, remote){
+								if(e) callback(e);
+								else{
+									_.each(remote, function(model){
+										models[models.indexOf(model._id)] = model; //replace that id with fetched model
+									});
+									if(callback) callback(null, models);
+								}
+							});
+							else if(callback) callback(null, models);
+						}
+					},
+					getOne : function(id, callback){
+						group.get(id, function(e, models){
+							callback(e, models&&models[0]);
+						});
+					},
+					load : function(inp, callback){
+						var inp = parse(inp);
+						if(inp.error) callback(inp.error);
+						else if(!group.util.parsed) callback('not in group'+inp.ids)
+						else api.find({ //find by id, also matching query
+							$and : [
+								group.util.fullQuery(),
+								{_id : {$in : inp.ids}} 
+							]
+						}, callback);
+					},
+					find : function(query, callback){
+						if(!group.util.parsed) callback(null, []); //no query, no result
+						else api.find({
+							$and : [
+								group.util.fullQuery(),
+								query 
+							]
+						}, callback);
+					},
+					findOne : function(props, callback){
+						group.find(props, function(e, models){
+							callback(e, models&&models[0]);
+						});
+					},
+					insert : function(models, callback){ //include in group/parents, or existing model
+						group.util.include(models, function(e, includedModels){
+							if(e) callback(e);
+							else api.insert(includedModels, callback);
+						})
+					},
+					update : function(inp, callback){ //must be within group, enforce it staying???? hmmmm not now.
+						var inp = parse(inp);
+						if(inp.error) callback(inp.error);
+						else if(!group.util.parsed) callback('no query');
+						else{
+							var failed = _.filter(inp.models, function(model){
+								return !group.util.models[model._id];
+							});
+							if(failed.length) callback('models not in group');
+							else api.update(inp.models, callback);
+						}
+					},
+					include : function(inp, callback){ //include to group
+						api.get(inp, function(e, models){
+							if(e) callback(e);
+							else group.util.include(models, function(e, included){
+								if(e) callback(e);
+								else api.update(included, callback);
+							})
+						});
+					},
+					exclude : function(inp, callback){ //exclude from group (ADD AN 'UNTILL') param, remove untill a specific parent
+						api.get(inp, function(e, models){
+							if(e) callback(e);
+							else group.util.exclude(models, function(e, excluded){
+								if(e) callback(e);
+								else api.update(excluded, callback);
+							})
+						});
+					},
+					group : function(opt){ //subgroup
+						return api.group(opt, group); //return with it as parent
+					},
+					bind : function(inp){
+						var options;
+						if(!inp || !inp.query) options = {
+							query : inp //input of not object is assumed to be query
+						};
+						else options = inp;
+						group.util.query = options.query;
+						group.util.parsed = options.query?mongo.parse(options.query):false;
+						group.util.includefn = options.include||false;
+						group.util.excludefn = options.exclude||false;
+						/* now compare against all already known models, (in parent group) */
+						_.each(group.util.parent?group.util.parent.util.models:setmodels, function(m){
+							group.util.catch(m);
+						});
+						if(!group.util.parent) api.find(options.query); //fillerup
+					},
+					order : function(predicate, r){
+						var test = predicate;
+						if(_.isString(predicate)) test = function(model){
+							return model[predicate];
+						}
+						reverse = !!r;
+						order = test;
+						/* run models through again */
+						_.each(group.util.models, function(model){
+							group.util.catch(model);
+						})
+					},
 					on : function(event, callback){
 						_.each(event.split(' '), function(event){
-							if(event == 'add'){
+							if(event == 'include'){
 								/* no memory for adding callbacks, since we're manually implementing "memory" */
 								events[event] = events[event]||$.Callbacks();
 								_.each(group.util.models, function(model){
-									callback(model);
+									callback(model, group.util.order.indexOf(model._id));
 								})
-							}else events[event] = events[event]||$.Callbacks('memory');
+							}else if(event == 'change') events[event] = events[event]||$.Callbacks('memory');
+							else events[event] = events[event]||$.Callbacks();
 							events[event].add(callback);
 						});
-						return group;
+					},
+					off : function(event){
+						_.each(event.split(' '), function(event){
+							if(events[event]) events[event].empty();
+						});
+					},
+					includes : function(model){
+						return group.util.parsed.matches(model); 
+					},
+					util : {
+						models : {},
+						order : [],
+						subgroups : [],
+						catch : function(model){
+							var valid = group.util.parsed?group.util.parsed.matches(model):false;
+							var ingroup = group.util.models[model._id];
+							if(valid){
+								group.util.order = _.chain(group.util.order.concat(model._id))
+									.uniq()
+									.sortBy(function(id){
+										return order(id==model._id?model:setmodels[id]);
+									}).value();
+								if(reverse) group.util.order.reverse();
+								group.util.models[model._id] = model;
+								if(ingroup) group.util.trigger('update', model, group.util.order.indexOf(model._id));
+								else{ //not currently in group, but should be
+									group.util.trigger('include', model, group.util.order.indexOf(model._id));
+								}
+								/* in group, push the catch down */
+								_.each(group.util.subgroups, function(subgroup){
+									subgroup.util.catch(model);
+								})
+							}else if(ingroup) group.util.purge(model._id); //will propogate to subgroups
+						},
+						trigger : function(event){
+							var passthrough = _.tail(arguments);
+							_.each(event.split(' '), function(event){
+								events[event] = events[event]||$.Callbacks(event == 'include'?undefined:'memory'); //no memory for add
+								events[event].fire.apply(this, passthrough);
+							})
+						},
+						include : function(models, callback){
+							if(!group.util.includefn) callback('missing include function');
+							else if(!group.util.parsed) callback('no query');
+							else{
+								/* if we have a parent group, include it there first */
+								if(group.util.parent) group.util.parent.util.include(models, cont);
+								else cont(null, models)
+								function cont(e, models){  
+									if(!_.isArray(models)) models = [models];
+									var notIncluded = _.reject(models, group.includes);
+									models = _.difference(models, notIncluded); //remove those about to be changed
+									if(e) callback(e);
+									else async.map(JSON.parse(JSON.stringify(notIncluded)), group.util.includefn, function(e, included){
+										if(e) callback(e);
+										else{
+											var failed = _.reject(included, function(m){
+												return group.util.parsed.matches(m);
+											});
+											if(failed.length) callback('include failed');
+											else callback(null, models.concat(included));
+										}
+									});
+								}
+							}
+						},
+						exclude : function(models, callback){
+							if(!group.util.excludefn) callback('missing exclude function');
+							else if(!group.util.parsed) callback('no query');
+							else{
+								if(!_.isArray(models)) models = [models];
+								var included = _.filter(models, group.includes); //only exclude the ones that are currently included
+								models = _.difference(models, included); //remove those about to be changed
+								async.map(JSON.parse(JSON.stringify(included)), group.util.excludefn, function(e, excluded){
+									if(e) callback(e);
+									else{
+										var failed = _.filter(excluded, function(m){
+											return group.util.parsed.matches(m);
+										});
+										if(failed.length) callback('exclude failed');
+										else callback(null, models.concat(excluded));
+									}
+								});
+							}
+						},
+						purge : function(modelId){
+							group.util.order = _.without(group.util.order, modelId);
+							delete group.util.models[modelId];
+							group.util.trigger('exclude', modelId);
+							group.util.trigger('models', _.values(group.util.models));
+							/* for any subgroups, purge should propegate */
+							_.each(group.util.subgroups, function(subgroup){
+								subgroup.util.purge(modelId);
+							})
+						},
+						fullQuery : function(){ //gets query inclusive with parents
+							if(group.util.parent){
+								var pq = group.util.parent.util.fullQuery();
+								if(!_.isArray(pq)) pq = [pq];
+								return {$and : pq.concat(group.util.query)}
+							}else return group.util.query;
+						}
+					}
+				};
+				group.on('include exclude update', function(){
+					var m = _.map(group.util.order, function(id){
+						return group.util.models[id];
+					});
+					group.util.trigger('change', m);
+				})
+				if(parentGroup){
+					group.util.parent = parentGroup;
+					parentGroup.util.subgroups.push(group);
+				}
+				else groups.push(group);
+				group.bind(inp);
+				addUnderscore(group);
+				return group;
+			},
+			subset : function(inp){
+				var events = {};
+
+				var subset = {
+					bind : function(inp){
+						inp = inp||[];
+						if(!_.isArray(inp)) inp = [inp];
+						if(inp.length){
+							var inp = parse(inp);
+							if(inp.error) return false;
+							subset.include(inp.ids); //include all since it getch checked anyways
+						}
+						subset.exclude(_.difference(_.keys(subset.util.models), inp.ids||inp)) //exclude what we need to
+					},
+					include : function(inp){
+						api.get(inp, function(e, models){
+							var newlyIncluded = _.reject(models, function(model){ //not in model
+								return subset.util.models[model._id]; 
+							});
+							_.each(newlyIncluded, function(model){
+								subsets[model._id] = subsets[model._id]||[];
+								subsets[model._id] = _.uniq(subsets[model._id].concat(subset));
+								subset.util.catch(model);
+							})
+							if(newlyIncluded.length) subset.util.trigger('change', _.values(subset.util.models));
+						})
+					},
+					exclude : function(inp){
+						var inp = parse(inp);
+						if(inp.error) return false;
+						var newlyExcluded = _.intersection(_.keys(subset.util.models), inp.ids);
+						_.each(newlyExcluded, function(toExclude){
+							subsets[toExclude] = _.without(subsets[toExclude], subset);
+							delete subset.util.models[toExclude];
+							subset.util.trigger('exclude', toExclude);
+						})
+						if(newlyExcluded.length) subset.util.trigger('change', _.values(subset.util.models));
+					},
+					insert : function(models, callback){ //include in group/parents, or existing model
+						api.insert(models, function(e, models){
+							if(e) callback(e);
+							else{
+								subset.include(models);
+								callback(null, models);
+							}
+						});
+					},
+					on : function(event, callback){
+						_.each(event.split(' '), function(event){
+							if(event == 'include'){
+								events[event] = events[event]||$.Callbacks();
+								_.each(subset.util.models, function(model){
+									callback(model); //no order for the moment
+								})
+							}else if(event == 'change') events[event] = events[event]||$.Callbacks('memory');
+							else events[event] = events[event]||$.Callbacks();
+							events[event].add(callback);
+						});
 					},
 					off : function(event){
 						_.each(event.split(' '), function(event){
@@ -147,154 +505,38 @@ define({
 						});
 					},
 					prop : function(propName, callback){
-						group.on('prop!'+propName, callback);
-						return group;
-					},
-					bind : function(input){
-						if(input == 'all') input = function(){return true;};
-						var test = input||function(){return false;};
-						/* if we are given a set of models, test will be if included */
-						if(!_.isFunction(test)){
-							var ids = parse(test).ids;
-							test = function(model){
-								return _.contains(ids, model._id);
-							}
-							if(ids) api.get(ids, function(e, models){
-								_.each(models, group.util.catch);
-							});
-						}
-						group.util.test = test;
-						/* now compare against all already known models */
-						_.each(api.models, group.util.catch);
-						return group;
-					},
-					models : function(callback){
-						group.on('add del update', function(){
-							callback(_.values(group.util.models));
-						});
-					},
-					order :  function(predicate, r){
-						var test = predicate;
-						if(_.isString(predicate)) test = function(model){
-							return model[predicate];
-						}
-						reverse = r;
-						order = test;
-						_.each(group.util.models, function(model){
-							group.util.catch(model);
-						})
+						subset.on('prop!'+propName, callback);
 					},
 					util : {
 						models : {},
-						order : [],
-						catch : function(model){
-							if(!group.util.test) return false;
-							var valid = group.util.test(model);
-							var ingroup = group.util.models[model._id];
-							if(valid){
-								group.util.order = _.chain(group.util.order.concat(model._id))
-									.uniq()
-									.sortBy(function(id){
-										return order(id==model._id?model:api.models[id]);
-									}).value();
-								if(reverse) group.util.order.reverse();
-								group.util.models[model._id] = model;
-								if(ingroup) group.util.trigger('update', model, group.util.order.indexOf(model._id));
-								else{ //not currently in group, but should be
-									group.util.trigger('add', model, group.util.order.indexOf(model._id));
-								}
-								var oldModel = api.models[model._id];
-								_.each(model, function(newVal, prop){
-									if(!ingroup || !oldModel || (JSON.stringify(oldModel[prop]) != JSON.stringify(newVal))){
-										group.util.trigger('prop!'+prop, newVal, model._id);
-									}
-								});
-							}else if(ingroup){
-								group.util.order = _.without(group.util.order, model._id);
-								delete group.util.models[model._id];
-								group.util.trigger('del', model._id); //trigger w/id
-							}
-						},
 						trigger : function(event){
 							var passthrough = _.tail(arguments);
 							_.each(event.split(' '), function(event){
-								events[event] = events[event]||$.Callbacks(event == 'add'?undefined:'memory'); //no memory for add
+								events[event] = events[event]||$.Callbacks(event == 'include'?undefined:'memory'); //no memory for add
 								events[event].fire.apply(this, passthrough);
 							})
+						},
+						catch : function(model){
+							var old = subset.util.models[model._id];
+							if(old) subset.util.trigger('update', model);
+							else subset.util.trigger('include', model);
+							subset.util.models[model._id] = model;
+							if(old) subset.util.trigger('change', _.values(subset.util.models));
+							var oldModel = setmodels[model._id];
+							_.each(model, function(newVal, prop){
+								if(!old || JSON.stringify(oldModel[prop]) != JSON.stringify(newVal)){
+									subset.util.trigger('prop!'+prop, newVal, model._id);
+								}
+							});
 						}
 					}
 				};
-				var underscoreMethods = ['each', 'map', 'reduce', 'reduceRight', 'find', 'filter', 'where', 'findWhere', 'reject', 'every', 'some', 'contains', 'invoke', 'pluck', 'max', 'min', 'sortBy', 'groupBy', 'indexBy', 'countBy', 'shuffle', 'sample', 'toArray', 'size', 'partition'];
-				_.each(underscoreMethods, function(methodName){
-					group[methodName] = function(){
-						var args = arguments;
-						var done;
-						function complete(callback){
-							done = callback;
-						}
-						group.models(function(models){
-							var topass = Array.prototype.slice.call(args, 0);
-							topass.unshift(models);
-							var val = _[methodName].apply(this, topass);
-							if(done) done(val);
-						});
-						return complete;
-					}
-				});
-				api.groups.push(group);
-				group.bind(input);
-				return group;
+				subset.bind(inp);
+				addUnderscore(subset)
+				return subset;
 			},
-			models : {},
-			groups : [],
-			fn : {},
-			config : config,
-			util : {
-				checksums : {}, //object of checksums for model ids
-				getChanged : function(inp){ //given models return the changed ones
-					var inp = parse(inp);
-					if(inp.error) return [];
-					return _.filter(inp.models, function(model){
-						var existing = api.util.checksums[model._id]; //previous
-						var current = checksum(model); //new
-						if(!existing || existing != current){
-							api.util.checksums[model._id] = current; //update if model doesnt exist or is different
-							return true;
-						}else return false;
-					});
-				},
-				/* process models after they are retrieved from server and trigger changed */
-				postprocess : function(callback){
-					callback = callback||function(){};
-					return function(e, models){
-						if(e) callback(e);
-						else{
-							var diff = api.util.getChanged(models); //incudes new
-							_.each(diff, function(model){
-								_.each(api.groups, function(group){
-									group.util.catch(model);
-								});
-								api.models[model._id] = model;
-							});
-							callback(e, models);
-						}						
-					}
-				}
-			}
+			config : config
 		}
-		/* setup custom functions */
-		_.each(config.fn||{}, function(fn, name){
-			api.fn[name] = function(inp, options, callback){
-				options = _.isArray(options)?options:[options]; //force to array
-				inp = parse(inp); //parse models
-				if(inp.error) callback(inp.error);
-				else if(inp.models.length == 1) fn.call(api, inp.models[0], options[0], callback);
-				if(inp.models.length != options.length) callback('mismatched lengths');
-				else async.map(_.zip(inp.models, options), function(tuple, done){ //aggregate the callback response for each model
-					fn.call(api, tuple[0], tuple[1], done); //function gets passed everything and api as `this`
-				}, callback);
-			}
-		});
 		callback(null, api);
 	})
 })

@@ -33,6 +33,7 @@ module.exports = function(config, callback){
 			nodePath : local('load/setNode.js')
 		},
 		'file' : local('load/file.js'),
+		'browserify' : local('load/browserify.js'),
 		'ajax' : local('lib/ajax.js'),
 		'auth' : local('lib/auth.js'),
 		'middleware' : local('lib/middleware.js'),
@@ -184,7 +185,7 @@ module.exports = function(config, callback){
 								})
 								.post(json, function(req, res){
 									//add new model(s) to set, return models
-									set.add(req.body, handle(res), req.context);
+									set.insert(req.body, handle(res), req.context);
 								})
 								.put(json, function(req, res){
 									//update existing models, return models
@@ -195,7 +196,7 @@ module.exports = function(config, callback){
 									set.get(req.params.ids.split(','), handle(res), req.context);
 								})
 								.delete(function(req, res){ //delete models by id
-									set.del(req.params.ids.split(','), handle(res), req.context);
+									set.remove(req.params.ids.split(','), handle(res), req.context);
 								});
 							/* find and search simply passit to their server side counterparts */
 							router.route('/find').post(json, function(req, res){

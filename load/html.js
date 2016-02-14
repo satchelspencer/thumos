@@ -1,5 +1,5 @@
  define({
-    transform : function(text, path, callback){
+    transform : function(text, path, config, callback){
         var htmlMinify = nodeRequire('html-minifier');
         var crypto = nodeRequire('crypto');
         var _ = require('underscore');

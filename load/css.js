@@ -1,5 +1,5 @@
 define({
-	transform : function(csstext, path, callback){
+	transform : function(csstext, path, config, callback){
 		nodeRequire('less').render(csstext, function (e, css) {
 			if(e) callback(e);
 			else nodeRequire('postcss')([nodeRequire('autoprefixer-core')]).process(css).then(function(res){
