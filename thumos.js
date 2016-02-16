@@ -34,6 +34,7 @@ module.exports = function(config, callback){
 		},
 		'file' : local('load/file.js'),
 		'browserify' : local('load/browserify.js'),
+		'amd' : local('load/amd.js'),
 		'ajax' : local('lib/ajax.js'),
 		'auth' : local('lib/auth.js'),
 		'middleware' : local('lib/middleware.js'),

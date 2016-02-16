@@ -4,6 +4,7 @@
   "main": "thumos.js",
   "author": "Satchel Spencer",
   "dependencies": {
+    "almond": "^0.3.1",
     "async": "~1.2.0",
     "autoprefixer-core": "~5.2.0",
     "bcrypt": "~0.8.3",
@@ -26,6 +27,7 @@
     "mongo-parse": "^1.0.5",
     "mongojs": "~1.0.1",
     "postcss": "~4.1.11",
+    "requirejs": "^2.1.22",
     "sqwish": "~0.2.2",
     "through": "^2.3.8",
     "underscore": "~1.8.3"
