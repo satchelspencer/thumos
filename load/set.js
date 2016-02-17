@@ -91,6 +91,19 @@ define({
 			});
 		} 
 
+		/* turn $regex with $options into just regex object */
+		function parseRegexOptions(query){
+			query = query||{};
+			for(var f in query){
+				if(_.isArray(query[f])) query[f] = _.map(query[f], fixRegex);
+				else if(query[f].$options && query[f].$regex){
+					query[f].$regex = new RegExp(query[f].$regex, query[f].$options);
+					delete query[f].$options;
+				}
+			}
+			return query;
+		}
+
 		config.properties = _.mapObject(config.properties, function(value, property){
 			if(!value.valid) return {valid : value};
 			else return value;
@@ -288,7 +301,7 @@ define({
 						};
 						else options = inp;
 						group.util.query = options.query;
-						group.util.parsed = options.query?mongo.parse(options.query):false;
+						group.util.parsed = options.query?mongo.parse(parseRegexOptions(options.query)):false;
 						group.util.includefn = options.include||false;
 						group.util.excludefn = options.exclude||false;
 						/* now compare against all already known models, (in parent group) */
