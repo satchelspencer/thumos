@@ -43,6 +43,13 @@ define({
 			}
 		};
 
+		function ledger(context, inp, which){
+			if(!context) return false;
+			context.ledger[config.name] = context.ledger[config.name]||{};
+			context.ledger[config.name][which] = context.ledger[config.name][which]||{};
+			context.ledger[config.name][which][inp._id||inp] = inp._id?inp:1;
+		}
+
 		var propsQuery = _.mapObject(config.properties, function(val){
 			return 1;
 		});
@@ -80,7 +87,12 @@ define({
 								if (missing.length) callback({
 									noexist: missing
 								});
-								else callback(null, models);
+								else{
+									_.each(models, function(model){
+										ledger(context, model, 'update');
+									});
+									callback(null, models);
+								}
 							}
 						});
 					}
@@ -118,7 +130,9 @@ define({
 											/* check to see if document was succesfully inserted */
 											if(!result.n) cb({updateerr: model._id});
 											else middleware('remove', overwritten, function(e){
-												cb(e, _.extend(oldModel, newModel));
+												var final = _.extend(oldModel, newModel);
+												ledger(context, final, 'update');
+												cb(e, final);
 											}, context);
 										});
 									}, context); 
@@ -148,6 +162,7 @@ define({
 								}, function(e, res) {
 									if(e || !res.n) cb(e || 'failed to remove '+id); //add to the failed if res.n == 0 and was not removed
 									else{
+										ledger(context, id, 'remove');
 										removed.push(id);
 										middleware('remove', model, cb, context);
 									}
@@ -164,15 +179,14 @@ define({
 					if(e) callback({permission:e});
 					else propsControl(models, false, function(e, models){ 
 						if(e) callback(e);
-						else middleware('valid', models, function(e, models) {
+						else middleware('valid store init', models, function(e, models) {
 							if(e) callback(e);
-							else middleware('store', models, function(e, models){
-								if(e) callback(e);
-								else middleware('init', models, function(e, models){
-									if(e) callback(e);
-									else collection.insert(models, callback);
-								}, context);
-							}, context); 
+							else collection.insert(models, function(e, models){
+								if(!e) _.each(models, function(model){
+									ledger(context, model, 'update');
+								});
+								callback(e, models);
+							});
 						}, context);
 					});
 				});
@@ -187,6 +201,9 @@ define({
 								accessQuery
 							]
 						}, propsQuery, function(e, raw) {
+							if(!e) _.each(raw, function(model){
+								ledger(context, model, 'update');
+							});
 							callback(e, raw);
 						});
 					}

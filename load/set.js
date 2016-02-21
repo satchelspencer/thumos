@@ -7,7 +7,7 @@ define({
 		var crc32 = require('crc32');
 		var propsControl = require('props')(config);
 		var mongo = require('browserify!mongo-parse');
-
+		var sets = require('sets');
 		var api;
 		var setmodels = {};
 		var groups = [];
@@ -47,22 +47,24 @@ define({
 		}
 
 		/* response handler */
-		function response(callback){
+		function response(callback, get){
 			callback = callback||function(){};
-			return function(e, models){
+			return function(e, res){
 				if(e) callback(e);
 				else{
-					var diff = getChanged(models); //incudes new
-					_.each(diff, function(model){
-						_.each(groups, function(group){
-							group.util.catch(model);
-						});
-						if(subsets[model._id]) _.each(subsets[model._id], function(subset){
-							subset.util.catch(model);
-						});
-						setmodels[model._id] = model;
+					var diff = getChanged(res.res); // diff in response
+					/* iterate over each set listed in ledger */
+					_.each(res.ledger, function(ledger, setname){
+						var set = sets[setname];
+						if(set){
+							if(ledger.update) _.each(getChanged(_.values(ledger.update)), set.util.catch);
+							if(ledger.remove) _.each(ledger.remove, set.util.purge);
+						}
 					});
-					callback(e, models);
+					if(get) res.res = _.map(res.res, function(id){
+						return setmodels[id];
+					});
+					callback(e, res.res);
 				}						
 			}
 		}
@@ -145,10 +147,10 @@ define({
 			load : function(inp, callback){
 				var inp = parse(inp);
 				if(inp.error) callback(inp.error);
-				else ajax.req('get', config.path+'/i/'+inp.ids.join(','), response(callback));
+				else ajax.req('get', config.path+'/i/'+inp.ids.join(','), response(callback, 1));
 			},
 			find : function(query, callback){
-				ajax.req('post', config.path+'/find', query, response(callback));
+				ajax.req('post', config.path+'/find', query, response(callback, 1));
 			},
 			findOne : function(props, callback){
 				api.find(props, function(e, models){
@@ -161,7 +163,7 @@ define({
 					if(e) callback(e);
 					else middleware('send valid', models, function(e, toAdd){
 						if(e) callback(e);
-						else ajax.req('post', config.path, toAdd, response(callback));
+						else ajax.req('post', config.path, toAdd, response(callback, 1));
 					});
 				});
 			}, 
@@ -171,26 +173,16 @@ define({
 					if(e) callback(e);
 					else middleware('send valid', models, function(e, update){
 						if(e) callback(e);
-						else ajax.req('put', config.path, update, response(callback));
+						else ajax.req('put', config.path, update, response(callback, 1));
 					});
 				});
 			},
 			remove : function(inp, callback){ //del
 				callback = callback || function(){};
 				var inp = parse(inp); //parse model ids
+				/* TODO USING LEDGER IMPLEMENT INTO SAME RESPONSE FN */
 				if(inp.error) callback(inp.error);
-				else ajax.req('delete', config.path+'/i/'+inp.ids.join(','), function(e, deleted){
-					_.each(deleted, function(modelId){
-						_.each(groups, function(group){
-							if(group.util.models[modelId]) group.util.purge(modelId);
-						});
-						if(subsets[modelId]) _.each(subsets[modelId], function(subset){
-							subset.exclude(modelId);
-						});
-						delete setmodels[modelId];
-					});
-					if(callback) callback(e, deleted);
-				});
+				else ajax.req('delete', config.path+'/i/'+inp.ids.join(','), response(callback));
 			},
 			group : function(inp, parentGroup){
 				var events = {};
@@ -455,6 +447,8 @@ define({
 			},
 			subset : function(inp){
 				var events = {};
+				var order = function(){return 0;};
+				var reverse = false;
 
 				var subset = {
 					bind : function(inp){
@@ -500,6 +494,18 @@ define({
 							}
 						});
 					},
+					order : function(predicate, r){
+						var test = predicate;
+						if(_.isString(predicate)) test = function(model){
+							return model[predicate];
+						}
+						reverse = !!r;
+						order = test;
+						/* run models through again */
+						_.each(subset.util.models, function(model){
+							subset.util.catch(model);
+						})
+					},
 					on : function(event, callback){
 						_.each(event.split(' '), function(event){
 							if(event == 'include'){
@@ -521,6 +527,7 @@ define({
 						subset.on('prop!'+propName, callback);
 					},
 					util : {
+						order : [],
 						models : {},
 						trigger : function(event){
 							var passthrough = _.tail(arguments);
@@ -530,9 +537,15 @@ define({
 							})
 						},
 						catch : function(model){
+							subset.util.order = _.chain(subset.util.order.concat(model._id))
+								.uniq()
+								.sortBy(function(id){
+									return order(id==model._id?model:setmodels[id]);
+								}).value();
+							if(reverse) subset.util.order.reverse();
 							var old = subset.util.models[model._id];
-							if(old) subset.util.trigger('update', model);
-							else subset.util.trigger('include', model);
+							if(old) subset.util.trigger('update', model, subset.util.order.indexOf(model._id));
+							else subset.util.trigger('include', model, subset.util.order.indexOf(model._id));
 							subset.util.models[model._id] = model;
 							if(old) subset.util.trigger('change', _.values(subset.util.models));
 							var oldModel = setmodels[model._id];
@@ -548,8 +561,29 @@ define({
 				addUnderscore(subset)
 				return subset;
 			},
-			config : config
+			config : config,
+			util : {
+				catch : function(model){
+					_.each(groups, function(group){
+						group.util.catch(model);
+					});
+					if(subsets[model._id]) _.each(subsets[model._id], function(subset){
+						subset.util.catch(model);
+					});
+					setmodels[model._id] = model;
+				},
+				purge : function(modelId){
+					_.each(groups, function(group){
+						if(group.util.models[modelId]) group.util.purge(modelId);
+					});
+					if(subsets[modelId]) _.each(subsets[modelId], function(subset){
+						subset.exclude(modelId);
+					});
+					delete setmodels[modelId];
+				}
+			}
 		}
+		require('sets')[config.name] = api; //add to global list of sets
 		callback(null, api);
 	})
 })
