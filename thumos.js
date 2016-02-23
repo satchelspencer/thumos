@@ -143,15 +143,18 @@ module.exports = function(config, callback){
 					else next();
 				});
 			}
-			var handle = function(req, res, setname){
+			var handle = function(req, res){
 				return function(e, response){
-					if(e) res.json({error : e, ledger : req.context.ledger});
-					else{
-						var rids = _.map(response, function(m){
+					if(e) res.json({
+						error : e,
+						ledger : req.context.ledger
+					});
+					else res.json({
+						res : _.map(response, function(m){
 							return m._id || m;
-						})
-						res.json({res : rids, ledger : req.context.ledger});
-					}
+						}), 
+						ledger : req.context.ledger
+					});
 				}
 			}
 			/* insert thumos config as a requireble module */
@@ -188,29 +191,29 @@ module.exports = function(config, callback){
 							var router = express.Router();
 							router.route('/')
 								.get(function(req, res){ //list according to default query
-									set.find({}, handle(req, res, set.config.name), req.context);
+									set.find({}, handle(req, res), req.context);
 								})
 								.post(json, function(req, res){
 									//add new model(s) to set, return models
-									set.insert(req.body, handle(req, res, set.config.name), req.context);
+									set.insert(req.body, handle(req, res), req.context);
 								})
 								.put(json, function(req, res){
 									//update existing models, return models
-									set.update(req.body, handle(req, res, set.config.name), req.context);
+									set.update(req.body, handle(req, res), req.context);
 								});
 							router.route('/i/:ids')
 								.get(function(req, res){ //get models by id
-									set.get(req.params.ids.split(','), handle(req, res, set.config.name), req.context);
+									set.get(req.params.ids.split(','), handle(req, res), req.context);
 								})
 								.delete(function(req, res){ //delete models by id
-									set.remove(req.params.ids.split(','), handle(req, res, set.config.name), req.context);
+									set.remove(req.params.ids.split(','), handle(req, res), req.context);
 								});
 							/* find and search simply passit to their server side counterparts */
 							router.route('/find').post(json, function(req, res){
-								set.find(req.body, handle(req, res, set.config.name), req.context);
+								set.find(req.body, handle(req, res), req.context);
 							});
 							router.route('/search').post(json, function(req, res){
-								set.search(req.body, handle(req, res, set.config.name), req.context);
+								set.search(req.body, handle(req, res), req.context);
 							});
 
 							/* custom routes setup */

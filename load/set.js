@@ -37,12 +37,9 @@ define({
 			var inp = parse(inp);
 			if(inp.error) return [];
 			return _.filter(inp.models, function(model){
-				var existing = checksums[model._id]; //previous
-				var current = crc32.str(JSON.stringify(model)); //new
-				if(!existing || existing != current){
-					checksums[model._id] = current; //update if model doesnt exist or is different
-					return true;
-				}else return false;
+				var existing = setmodels[model._id]; //previous
+				var current = JSON.stringify(model);
+				return !existing || JSON.stringify(existing) != current;
 			});
 		}
 
