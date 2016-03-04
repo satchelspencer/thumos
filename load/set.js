@@ -55,7 +55,7 @@ define({
 						var set = sets[setname];
 						if(set){
 							if(ledger.update) _.each(getChanged(_.values(ledger.update)), set.util.catch);
-							if(ledger.remove) _.each(ledger.remove, set.util.purge);
+							if(ledger.remove) _.each(_.keys(ledger.remove), set.util.purge);
 						}
 					});
 					if(get) res.res = _.map(res.res, function(id){
@@ -177,7 +177,6 @@ define({
 			remove : function(inp, callback){ //del
 				callback = callback || function(){};
 				var inp = parse(inp); //parse model ids
-				/* TODO USING LEDGER IMPLEMENT INTO SAME RESPONSE FN */
 				if(inp.error) callback(inp.error);
 				else ajax.req('delete', config.path+'/i/'+inp.ids.join(','), response(callback));
 			},
@@ -333,6 +332,7 @@ define({
 						return group.util.parsed.matches(model); 
 					},
 					util : {
+						set : api,
 						models : {},
 						order : [],
 						subgroups : [],
@@ -524,6 +524,7 @@ define({
 						subset.on('prop!'+propName, callback);
 					},
 					util : {
+						set : api,
 						order : [],
 						models : {},
 						trigger : function(event){

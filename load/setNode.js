@@ -16,16 +16,23 @@ define({
 		config.access.write = config.access.write||function(i,c){c()}; //always throw error
 		/*  make _id in a query work:
 		see: https://github.com/Automattic/monk/blob/2821708862d8dba0303a78095ebbb90f1fef5b2b/lib/collection.js#L548 */
-		var id = thumosConfig.db.id;
+		function id(something){
+			if(_.keys(something).length && !something._bsontype){
+				if(_.isArray(something)) return _.map(something, id);
+				else return _.mapObject(something, id);
+			}else return thumosConfig.db.id(something);
+		}
+
+		function transformPart(val, key){
+			if(key == '_id') return id(val);
+			else if(_.keys(val).length && !val._bsontype) return idify(val);
+			else return val;
+		}
+
 		function idify(query){
-			query = query||{};
-			if(query._id) query._id = id(query._id);
-			if(query.$set && query.$set._id) query.$set._id = id(query.$set._id);
-			if(query.$not && query.$not._id) query.$not._id = id(query.$not._id);
-			if(query.$and && _.isArray(query.$and)) query.$and = _.map(query.$and, idify);
-			if(query.$or && _.isArray(query.$or)) query.$or = _.map(query.$or, idify);
-			if(query.$nor && _.isArray(query.$nor)) query.$nor = _.map(query.$nor, idify);
-			return query;
+			if(_.isArray(query)) return _.map(query, transformPart);
+			else if(_.keys(query).length) return _.mapObject(query, transformPart);
+			else return query;
 		}
 		/* access control is overridden if called by server w/ no id */
 		var access = {
@@ -129,11 +136,14 @@ define({
 										}, function(e, result) {
 											/* check to see if document was succesfully inserted */
 											if(!result.n) cb({updateerr: model._id});
-											else middleware('remove', overwritten, function(e){
-												var final = _.extend(oldModel, newModel);
-												ledger(context, final, 'update');
-												cb(e, final);
-											}, context);
+											else middleware('stored', model, function(e){
+												if(e) cb(e);
+												else middleware('remove', overwritten, function(e){
+													var final = _.extend(oldModel, newModel);
+													ledger(context, final, 'update');
+													cb(e, final);
+												}, context);
+											}) 
 										});
 									}, context); 
 								});
@@ -182,16 +192,21 @@ define({
 						else middleware('valid store init', models, function(e, models) {
 							if(e) callback(e);
 							else collection.insert(models, function(e, models){
-								if(!e) _.each(models, function(model){
-									ledger(context, model, 'update');
-								});
-								callback(e, models);
+								if(e) callback(e);
+								else middleware('stored', models, function(e){
+									if(!e) _.each(models, function(model){
+										ledger(context, model, 'update');
+									});
+									callback(e, models);
+								})
 							});
 						}, context);
 					});
 				});
 			},
 			find: function(query, callback, context) {
+				var util = nodeRequire("util");
+    console.log(util.inspect(idify(query), {showHidden: false, depth: null}));
 				access.read(context, function(e, accessQuery){
 					if(e) callback({permission:e});
 					else{
