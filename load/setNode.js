@@ -206,7 +206,6 @@ define({
 			},
 			find: function(query, callback, context) {
 				var util = nodeRequire("util");
-    console.log(util.inspect(idify(query), {showHidden: false, depth: null}));
 				access.read(context, function(e, accessQuery){
 					if(e) callback({permission:e});
 					else{

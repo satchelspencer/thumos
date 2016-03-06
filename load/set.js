@@ -94,7 +94,7 @@ define({
 		function parseRegexOptions(query){
 			query = query||{};
 			for(var f in query){
-				if(_.isArray(query[f])) query[f] = _.map(query[f], fixRegex);
+				if(_.isArray(query[f])) query[f] = _.map(query[f], parseRegexOptions);
 				else if(query[f].$options && query[f].$regex){
 					query[f].$regex = new RegExp(query[f].$regex, query[f].$options);
 					delete query[f].$options;
