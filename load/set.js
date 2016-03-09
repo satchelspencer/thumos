@@ -295,7 +295,8 @@ define({
 						/* now compare against all already known models, (in parent group) */
 						_.each(group.util.parent?group.util.parent.util.models:setmodels, function(m){
 							group.util.catch(m);
-						});
+						}); 
+						if(!_.keys(group.util.models).length) group.util.trigger('change', []); //trigger for empty
 						if(!group.util.parent) api.find(options.query); //fillerup
 					},
 					order : function(predicate, r){
