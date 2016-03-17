@@ -183,10 +183,9 @@ module.exports = function(config, callback){
 						/* setp routes for each set! loaded */
 						var sets = _.values(loaded);
 						/* initialize authentication */
-						if(config.auth){
-							authInit(config, sets[0], json);
-							sets = _.rest(sets);
-						}
+						authInit(config, config.auth?sets[0]:false, json);
+						if(config.auth) sets = _.rest(sets);
+
 						async.eachSeries(sets, function(set, setReady){
 							var router = express.Router();
 							router.route('/')
