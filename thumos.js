@@ -228,7 +228,15 @@ module.exports = function(config, callback){
 							/* add to main thumos router */
 							config.router.use(set.config.path||'/'+set.config.name, router);
 							setReady();
-						}, callback);
+						}, function(e){
+							if(e || !config.include) callback(e);
+							else bilt.require({
+								paths : paths,
+								deps : config.include
+							}, function(e, loaded){
+								callback(e);
+							})
+						});
 					}
 				});
 			})
