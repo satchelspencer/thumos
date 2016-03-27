@@ -289,7 +289,8 @@ define({
 						};
 						else options = inp;
 						group.util.query = options.query;
-						group.util.parsed = options.query?mongo.parse(parseRegexOptions(options.query)):false;
+						if(_.isFunction(options.query)) group.util.parsed = {matches : options.query};
+						else group.util.parsed = options.query?mongo.parse(parseRegexOptions(options.query)):false;
 						group.util.includefn = options.include||false;
 						group.util.excludefn = options.exclude||false;
 						/* now compare against all already known models, (in parent group) */
