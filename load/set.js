@@ -289,8 +289,13 @@ define({
 						};
 						else options = inp;
 						group.util.query = options.query;
-						if(_.isFunction(options.query)) group.util.parsed = {matches : options.query};
-						else group.util.parsed = options.query?mongo.parse(parseRegexOptions(options.query)):false;
+						if(_.isFunction(options.query)) group.util.test = options.query;
+						else{
+							group.util.parsed = options.query?mongo.parse(parseRegexOptions(options.query)):false;
+							group.util.test = function(inp, cb){
+								cb(null, group.util.parsed?group.util.parsed.matches(inp):false); 
+							}
+						}
 						group.util.includefn = options.include||false;
 						group.util.excludefn = options.exclude||false;
 						/* now compare against all already known models, (in parent group) */
@@ -298,7 +303,7 @@ define({
 							group.util.catch(m);
 						}); 
 						if(!_.keys(group.util.models).length) group.util.trigger('change', []); //trigger for empty
-						if(!group.util.parent) api.find(options.query); //fillerup
+						if(!group.util.parent && !_.isFunction(options.query)) api.find(options.query); //fillerup
 					},
 					order : function(predicate, r){
 						var test = predicate;
@@ -339,25 +344,26 @@ define({
 						order : [],
 						subgroups : [],
 						catch : function(model){
-							var valid = group.util.parsed?group.util.parsed.matches(model):false;
 							var ingroup = group.util.models[model._id];
-							if(valid){
-								group.util.order = _.chain(group.util.order.concat(model._id))
-									.uniq()
-									.sortBy(function(id){
-										return order(id==model._id?model:setmodels[id]);
-									}).value();
-								if(reverse) group.util.order.reverse();
-								group.util.models[model._id] = model;
-								if(ingroup) group.util.trigger('update', model, group.util.order.indexOf(model._id));
-								else{ //not currently in group, but should be
-									group.util.trigger('include', model, group.util.order.indexOf(model._id));
-								}
-								/* in group, push the catch down */
-								_.each(group.util.subgroups, function(subgroup){
-									subgroup.util.catch(model);
-								})
-							}else if(ingroup) group.util.purge(model._id); //will propogate to subgroups
+							group.util.test(model, function(e, valid){
+								if(valid){
+									group.util.order = _.chain(group.util.order.concat(model._id))
+										.uniq()
+										.sortBy(function(id){
+											return order(id==model._id?model:setmodels[id]);
+										}).value();
+									if(reverse) group.util.order.reverse();
+									group.util.models[model._id] = model;
+									if(ingroup) group.util.trigger('update', model, group.util.order.indexOf(model._id));
+									else{ //not currently in group, but should be
+										group.util.trigger('include', model, group.util.order.indexOf(model._id));
+									}
+									/* in group, push the catch down */
+									_.each(group.util.subgroups, function(subgroup){
+										subgroup.util.catch(model);
+									})
+								}else if(ingroup) group.util.purge(model._id); //will propogate to subgroups
+							})
 						},
 						trigger : function(event){
 							var passthrough = _.tail(arguments);
