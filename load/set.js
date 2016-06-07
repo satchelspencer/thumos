@@ -476,7 +476,7 @@ define({
 								subsets[model._id] = _.uniq(subsets[model._id].concat(subset));
 								subset.util.catch(model);
 							})
-							if(newlyIncluded.length) subset.util.trigger('change', _.values(subset.util.models));
+							if(newlyIncluded.length) subset.util.trigger('change', subset.util.getOrderedModels());
 						})
 					},
 					exclude : function(inp){
@@ -488,7 +488,7 @@ define({
 							delete subset.util.models[toExclude];
 							subset.util.trigger('exclude', toExclude);
 						})
-						if(newlyExcluded.length) subset.util.trigger('change', _.values(subset.util.models));
+						if(newlyExcluded.length) subset.util.trigger('change', subset.util.getOrderedModels());
 					},
 					insert : function(models, callback){ //include in group/parents, or existing model
 						api.insert(models, function(e, models){
@@ -535,6 +535,11 @@ define({
 						set : api,
 						order : [],
 						models : {},
+						getOrderedModels : function(){
+							return _.compact(_.map(subset.util.order, function(id){
+								return subset.util.models[id]
+							}))
+						},
 						trigger : function(event){
 							var passthrough = _.tail(arguments);
 							_.each(event.split(' '), function(event){
@@ -553,7 +558,7 @@ define({
 							if(old) subset.util.trigger('update', model, subset.util.order.indexOf(model._id));
 							else subset.util.trigger('include', model, subset.util.order.indexOf(model._id));
 							subset.util.models[model._id] = model;
-							if(old) subset.util.trigger('change', _.values(subset.util.models));
+							if(old) subset.util.trigger('change', subset.util.getOrderedModels());
 							var oldModel = setmodels[model._id];
 							_.each(model, function(newVal, prop){
 								if(!old || JSON.stringify(oldModel[prop]) != JSON.stringify(newVal)){
