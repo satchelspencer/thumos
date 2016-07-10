@@ -25,7 +25,7 @@
     "less": "~1.7.5",
     "memcached": "~2.2.1",
     "mongo-parse": "^1.0.5",
-    "mongojs": "~1.0.1",
+    "mongojs": "^2.4.0",
     "postcss": "~4.1.11",
     "requirejs": "^2.1.22",
     "sqwish": "~0.2.2",
